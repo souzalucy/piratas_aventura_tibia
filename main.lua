@@ -127,8 +127,8 @@ function love.update(dt)
     -- Normalize diagonal movement
     if vx ~= 0 and vy ~= 0 then
         local length = math.sqrt(vx * vx + vy * vy)
-        vx = vx / length
-        vy = vy / length
+        vx = vx / length * game.player.speed
+        vy = vy / length * game.player.speed
     end
 
     game.player.collider:setLinearVelocity(vx, vy)
@@ -148,30 +148,33 @@ function love.update(dt)
     -- Camera follows the player
     game.cam:lookAt(game.player.x, game.player.y)
 
-    local w = love.graphics.getWidth()
-    local h = love.graphics.getHeight()
-
-    -- cam limit to left boarder
-    if game.cam.x < w / 2 then
-        game.cam.x = w / 2
-    end
-
-    -- cam limit to top boarder
-    if game.cam.y < h / 2 then
-        game.cam.y = h / 2
-    end
-
+    -- Get the map dimensions
     local mapW = game.map.width * game.map.tilewidth
     local mapH = game.map.height * game.map.tileheight
 
+    -- Get the window dimensions
+    local w, h = love.graphics.getDimensions()
+    local halfW = math.min(w, mapW) / 2
+    local halfH = math.min(h, mapH) / 2
+
+    -- cam limit to left boarder
+    if game.cam.x < halfW then
+        game.cam.x = halfW
+    end
+
+    -- cam limit to top boarder
+    if game.cam.y < halfH then
+        game.cam.y = halfH
+    end
+
     -- cam limit to right boarder
-    if game.cam.x > mapW - w / 2 then
-        game.cam.x = mapW - w / 2
+    if w < mapW and game.cam.x > mapW - halfW then
+        game.cam.x = mapW - halfW
     end
 
     -- cam limit to bottom boarder
-    if game.cam.y > mapH - h / 2 then
-        game.cam.y = mapH - h / 2
+    if h < mapH and game.cam.y > mapH - halfH then
+        game.cam.y = mapH - halfH
     end
 
     -- Update debug watches
