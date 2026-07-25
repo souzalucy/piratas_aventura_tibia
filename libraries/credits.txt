@@ -1,0 +1,19 @@
+=> anim8.lua
+Anim8 Github page:
+https://github.com/kikito/anim8
+Function: adding animations
+
+=> camera.lua
+Hump Github page:
+https://github.com/vrld/hump
+Function: Game camera implementation
+
+=> sti folder
+Simple Tiled Github page:
+https://github.com/karai17/Simple-Tiled-Implementation
+Function: load the backgrounds
+
+=> windfield folder
+Windfield  Github page:
+https://github.com/a327ex/windfield
+Function: physics and collisions

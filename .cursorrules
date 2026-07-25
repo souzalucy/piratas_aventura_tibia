@@ -5,9 +5,10 @@ This project is a Löve2D game built with Lua. Follow these guidelines when work
 ## Project Structure
 - main.lua: The entry point that initializes the game
 - conf.lua: Configuration settings for the Löve2D framework
-- lib/: Third-party libraries and dependencies
+- libraries/: Third-party libraries and dependencies
 - assets/: Game assets (images, audio, fonts, shaders)
 - src/: Source code organized by functionality
+- maps/: Game map files
 
 ## File Organization
 - Keep related code in dedicated modules

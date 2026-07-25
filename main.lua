@@ -7,17 +7,29 @@ if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
 end
 
 -- Import modules
-local Entity = require("src.Entity")
-local utils = require("src.utils")
+--local utils = require("src.utils")
 local debug_helpers = require("src.debug_helpers")
+local anim8 = require("libraries/anim8")
+local camera = require("libraries/camera")
+local sti = require("libraries/sti")
+local wf = require("libraries/windfield")
 
 -- Game state variables
 local game = {
-    -- Game settings
     background_color = { 0.1, 0.1, 0.2 },
     entities = {},
-    player = nil
+    player = nil,
+    -- create camera
+    cam = camera(),
+    -- world creation
+    world = wf.newWorld(0, 0),
+    -- create the map
+    map = sti("maps/map.lua"),
+    walls = {} -- wall colliders — physics only, no update/drawable
 }
+
+-- Genral local variables
+local showColliders = false
 
 -- Called once when the game starts
 function love.load()
@@ -25,102 +37,141 @@ function love.load()
     debug_helpers.init()
     debug_helpers.log("Game starting", "INFO")
 
-    -- Set window title (can also be set in conf.lua)
-    love.window.setTitle("Love2D Cursor Template")
-
     -- Set default font
     love.graphics.setNewFont(16)
 
     -- For pixel art games, disable filtering for crisp pixels
-    -- love.graphics.setDefaultFilter("nearest", "nearest")
+    love.graphics.setDefaultFilter("nearest", "nearest")
 
     -- Create player entity
-    game.player = Entity.new(400, 300, 40, 40)
-    game.player.color = utils.colors.blue
-    game.player.speed = 200
-    table.insert(game.entities, game.player)
-    debug_helpers.log("Player entity created")
+    game.player = {}
+    game.player.x = 400
+    game.player.y = 200
 
-    -- Create some random entities
-    for i = 1, 5 do
-        local entity = Entity.new(
-            love.math.random(100, 700),
-            love.math.random(100, 500),
-            love.math.random(20, 60),
-            love.math.random(20, 60)
-        )
-        entity.color = utils.colors.withAlpha(
-            { love.math.random(), love.math.random(), love.math.random() },
-            0.8
-        )
-        entity:setVelocity(
-            love.math.random(-50, 50),
-            love.math.random(-50, 50)
-        )
-        table.insert(game.entities, entity)
+    game.player.collider = game.world:newBSGRectangleCollider(400, 200, 32, 32, 4)
+    game.player.collider:setFixedRotation(true)
+    game.player.speed = 50
+
+    game.player.spriteSheetDown = love.graphics.newImage("assets/images/sprites/down.png")
+    game.player.spriteSheetUp = love.graphics.newImage("assets/images/sprites/up.png")
+    game.player.spriteSheetLeft = love.graphics.newImage("assets/images/sprites/left.png")
+    game.player.spriteSheetRight = love.graphics.newImage("assets/images/sprites/right.png")
+
+    game.player.gridDown = anim8.newGrid(64, 64, game.player.spriteSheetDown:getWidth(),
+        game.player.spriteSheetDown:getHeight())
+    game.player.gridUp = anim8.newGrid(64, 64, game.player.spriteSheetUp:getWidth(),
+        game.player.spriteSheetUp:getHeight())
+    game.player.gridLeft = anim8.newGrid(64, 64, game.player.spriteSheetLeft:getWidth(),
+        game.player.spriteSheetLeft:getHeight())
+    game.player.gridRight = anim8.newGrid(64, 64, game.player.spriteSheetRight:getWidth(),
+        game.player.spriteSheetRight:getHeight())
+
+    game.player.animation = {}
+    game.player.animation.Down = anim8.newAnimation(game.player.gridDown('1-9', 1), 0.1)
+    game.player.animation.Up = anim8.newAnimation(game.player.gridUp('1-9', 1), 0.1)
+    game.player.animation.Left = anim8.newAnimation(game.player.gridLeft('1-9', 1), 0.1)
+    game.player.animation.Right = anim8.newAnimation(game.player.gridRight('1-9', 1), 0.1)
+
+    game.player.spriteSheet = game.player.spriteSheetDown
+    game.player.animations = game.player.animation.Down
+    debug_helpers.log("Player created")
+
+    -- Walls: physics only
+    if game.map.layers["walls"] then
+        for _, obj in pairs(game.map.layers["walls"].objects) do
+            local wall = game.world:newRectangleCollider(obj.x, obj.y, obj.width, obj.height)
+            wall:setType("static")
+            table.insert(game.walls, wall) -- store reference, not for update/draw loops
+        end
     end
-    debug_helpers.log("Created " .. #game.entities - 1 .. " random entities")
 end
 
 -- Called every frame to update game state
 -- dt is the time elapsed since the last update in seconds
 function love.update(dt)
+    -- Update the physics world
+    local isMoving = false
+
+    local vx = 0
+    local vy = 0
+
     -- Handle keyboard input for player movement
-    local dx, dy = 0, 0
-    if love.keyboard.isDown("left") or love.keyboard.isDown("a") then
-        dx = dx - 1
+    if love.keyboard.isDown("right") then
+        vx = game.player.speed
+        game.player.animations = game.player.animation.Right
+        game.player.spriteSheet = game.player.spriteSheetRight
+        isMoving = true
     end
-    if love.keyboard.isDown("right") or love.keyboard.isDown("d") then
-        dx = dx + 1
+
+    if love.keyboard.isDown("left") then
+        vx = -game.player.speed
+        game.player.animations = game.player.animation.Left
+        game.player.spriteSheet = game.player.spriteSheetLeft
+        isMoving = true
     end
-    if love.keyboard.isDown("up") or love.keyboard.isDown("w") then
-        dy = dy - 1
+
+    if love.keyboard.isDown("up") then
+        vy = -game.player.speed
+        game.player.animations = game.player.animation.Up
+        game.player.spriteSheet = game.player.spriteSheetUp
+        isMoving = true
     end
-    if love.keyboard.isDown("down") or love.keyboard.isDown("s") then
-        dy = dy + 1
+
+    if love.keyboard.isDown("down") then
+        vy = game.player.speed
+        game.player.animations = game.player.animation.Down
+        game.player.spriteSheet = game.player.spriteSheetDown
+        isMoving = true
     end
 
     -- Normalize diagonal movement
-    if dx ~= 0 and dy ~= 0 then
-        local length = math.sqrt(dx * dx + dy * dy)
-        dx = dx / length
-        dy = dy / length
+    if vx ~= 0 and vy ~= 0 then
+        local length = math.sqrt(vx * vx + vy * vy)
+        vx = vx / length
+        vy = vy / length
     end
 
-    -- Set player velocity
-    game.player:setVelocity(dx * game.player.speed, dy * game.player.speed)
+    game.player.collider:setLinearVelocity(vx, vy)
 
-    -- Update all entities
-    for _, entity in ipairs(game.entities) do
-        entity:update(dt)
-
-        -- Bounce entities off screen edges
-        if entity ~= game.player then
-            if entity.x - entity.width / 2 < 0 or entity.x + entity.width / 2 > love.graphics.getWidth() then
-                entity.vx = -entity.vx
-            end
-            if entity.y - entity.height / 2 < 0 or entity.y + entity.height / 2 > love.graphics.getHeight() then
-                entity.vy = -entity.vy
-            end
-        end
+    -- animation logic
+    if isMoving == false then
+        game.player.animations:gotoFrame(1)
     end
 
-    -- Keep player within screen bounds
-    game.player.x = utils.clamp(game.player.x, game.player.width / 2, love.graphics.getWidth() - game.player.width / 2)
-    game.player.y = utils.clamp(game.player.y, game.player.height / 2, love.graphics.getHeight() - game.player.height / 2)
+    -- World update
+    game.world:update(dt)
+    game.player.x = game.player.collider:getX()
+    game.player.y = game.player.collider:getY()
 
-    -- Check for collisions with player
-    for i, entity in ipairs(game.entities) do
-        if entity ~= game.player and game.player:collidesWith(entity) then
-            -- Change color on collision
-            entity.color = utils.colors.blend(entity.color, utils.colors.red, 0.1)
+    game.player.animations:update(dt)
 
-            -- Rotate on collision
-            entity.rotation = entity.rotation + dt * 2
+    -- Camera follows the player
+    game.cam:lookAt(game.player.x, game.player.y)
 
-            -- Log collision in debug mode
-            debug_helpers.log("Collision detected with entity " .. i, "DEBUG")
-        end
+    local w = love.graphics.getWidth()
+    local h = love.graphics.getHeight()
+
+    -- cam limit to left boarder
+    if game.cam.x < w / 2 then
+        game.cam.x = w / 2
+    end
+
+    -- cam limit to top boarder
+    if game.cam.y < h / 2 then
+        game.cam.y = h / 2
+    end
+
+    local mapW = game.map.width * game.map.tilewidth
+    local mapH = game.map.height * game.map.tileheight
+
+    -- cam limit to right boarder
+    if game.cam.x > mapW - w / 2 then
+        game.cam.x = mapW - w / 2
+    end
+
+    -- cam limit to bottom boarder
+    if game.cam.y > mapH - h / 2 then
+        game.cam.y = mapH - h / 2
     end
 
     -- Update debug watches
@@ -133,19 +184,22 @@ function love.draw()
     -- Set background color
     love.graphics.setBackgroundColor(game.background_color)
 
-    -- Draw all entities
-    for _, entity in ipairs(game.entities) do
-        entity:draw()
-    end
-
-    -- Draw hitboxes in debug mode
-    debug_helpers.drawHitboxes(game.entities)
-
     -- Draw instructions
-    love.graphics.setColor(utils.colors.white)
+    --love.graphics.setColor(utils.colors.white)
     love.graphics.print("Use arrow keys or WASD to move", 10, 10)
     love.graphics.print("Press Escape to quit", 10, 30)
     love.graphics.print("Press F1 to toggle hitboxes", 10, 50)
+
+    game.cam:attach()
+    game.map:drawLayer(game.map.layers["ground"])
+    game.map:drawLayer(game.map.layers["trees"])
+    game.player.animations:draw(game.player.spriteSheet, game.player.x, game.player.y, nil, nil, nil, 48, 48)
+
+    if showColliders then
+        game.world:draw()
+    end
+
+    game.cam:detach()
 
     -- Draw debug information
     debug_helpers.draw()
@@ -158,10 +212,9 @@ function love.keypressed(key)
         love.event.quit()
     end
 
-    -- Toggle debug features
+    -- uncomment to see colliders
     if key == "f1" then
-        debug_helpers.SHOW_HITBOXES = not debug_helpers.SHOW_HITBOXES
-        debug_helpers.log("Hitboxes " .. (debug_helpers.SHOW_HITBOXES and "enabled" or "disabled"))
+        showColliders = not showColliders
     end
 
     -- Example of using the debugger function
