@@ -1,172 +1,102 @@
-# Love2D Cursor Template
+# Pirate Adventure in a Furry World
 
-A streamlined project template for developing games with the [LÖVE](https://love2d.org/) (Love2D) game engine using [Cursor](https://cursor.sh/) as your IDE.
+A 2D top-down RPG adventure game built with [LÖVE](https://love2d.org/) 11.5.
 
 ## Overview
 
-This template provides a clean, organized starting point for Love2D game development with built-in linting, formatting, and build tools. It's designed to help you focus on game creation while maintaining code quality and following best practices.
+Explore a tile-based world with pixel art sprites, physics-based movement, and a dynamic fog of war system that reveals the map as you travel.
 
 ## Features
 
-- **Pre-configured Project Structure**: Organized directories for source code, assets, and distribution
-- **Code Quality Tools**: Integrated linting and formatting with Lua Language Server, Luacheck, and StyLua
-- **Build Scripts**: Ready-to-use scripts for packaging your game for distribution
-- **VSCode/Cursor Integration**: Pre-configured settings for an optimal development experience
+- **Pixel Art Character**: 4-directional animated sprites (up/down/left/right) with 9-frame walk cycles
+- **Physics-Based Movement**: Diagonal normalization, map boundary clamping via windfield colliders
+- **Fog of War**: Tiles transition from unexplored → explored → visible based on player proximity
+- **Smooth Camera**: Follows the player with boundary clamping
+- **Tile Map**: Ground and tree layers rendered via STI
 
 ## Project Structure
 
 ```
-love2d-cursor-template/
-├── assets/            # Game assets (images, sounds, fonts, etc.)
-├── src/               # Source code files
-├── dist/              # Distribution files (generated during build)
-├── scripts/           # Build and utility scripts
-├── conf.lua           # Love2D configuration
-├── main.lua           # Game entry point
-├── .luacheckrc        # Luacheck configuration
-├── .editorconfig      # Editor configuration
-└── stylua.toml        # StyLua formatter configuration
+├── assets/              # Game assets (images, sprites, backgrounds)
+│   └── images/
+│       ├── backgrounds/ # Map tiles (ground, trees)
+│       └── sprites/     # Player directional sprites
+├── src/                 # Game source code
+│   ├── player.lua       # Player entity (input, movement, animation)
+│   ├── fog_of_war.lua   # Fog of war visibility system
+│   ├── Entity.lua       # Base entity class
+│   ├── utils.lua        # Math and camera utilities
+│   └── debug_helpers.lua # Debug logging, watches, overlay
+├── libraries/           # Third-party libraries
+│   ├── anim8.lua        # Sprite animation
+│   ├── camera.lua       # Camera system
+│   ├── sti/             # Simple Tiled Implementation (map loader)
+│   └── windfield/       # Physics wrapper
+├── maps/                # Tile maps (.tmx + .lua export)
+├── test/                # Unit tests (busted)
+│   ├── mocks/           # Mock Löve2D modules
+│   └── spec/            # Test specifications
+├── scripts/             # Build scripts
+│   └── make.sh          # macOS .love + .app build
+├── conf.lua             # LÖVE configuration
+└── main.lua             # Game entry point
 ```
 
 ## Getting Started
 
-1. **Clone this repository**:
-   ```bash
-   git clone https://github.com/yourusername/love2d-cursor-template.git your-game-name
-   cd your-game-name
-   ```
+### Prerequisites
 
-2. **Install Love2D**:
-   Download and install from [love2d.org](https://love2d.org/)
+- [LÖVE 11.5](https://love2d.org/)
 
-3. **Open in Cursor**:
-   Launch Cursor and open the project folder
+### Running
 
-4. **Install recommended extensions**:
-   - [Lua Language Server](https://marketplace.cursorapi.com/items?itemName=sumneko.lua) - Provides intelligent code completion, diagnostics, and more
-   - [Local Lua Debugger](https://marketplace.cursorapi.com/items?itemName=tomblind.local-lua-debugger-vscode) - Debug your Love2D games with breakpoints and variable inspection
-   - [Love Launcher](https://marketplace.cursorapi.com/items?itemName=JanW.love-launcher) - Launch your Love2D game directly from Cursor with ALT+L
-   - [vscode-luacheck](https://marketplace.cursorapi.com/items?itemName=dwenegar.vscode-luacheck) - Static analyzer for Lua code
-   - [EditorConfig](https://marketplace.cursorapi.com/items?itemName=EditorConfig.EditorConfig) - Maintain consistent coding styles across editors
-
-5. **Start coding**:
-   - Edit `conf.lua` to set your game's title and other settings
-   - Create your game logic in `main.lua` and the `src/` directory
-   - Add your assets to the `assets/` directory
-
-## Recommended Extensions
-
-### Lua Language Server (sumneko.lua)
-The most popular extension for Lua language support with nearly a million installs. It provides:
-- Support for Lua 5.4, 5.3, 5.2, 5.1, and LuaJIT
-- Over 20 supported annotations for documenting your code
-- Dynamic type checking
-- Go to definition and find references
-- Diagnostics and warnings
-- Syntax checking
-- Element renaming
-- Hover information and autocompletion
-
-### Local Lua Debugger (tomblind.local-lua-debugger-vscode)
-A simple Lua debugger with no additional dependencies:
-- Debug Lua using stand-alone interpreter or a custom executable
-- Supports Lua versions 5.1, 5.2, 5.3, and LuaJIT
-- Basic debugging features (stepping, inspecting, breakpoints)
-- Conditional breakpoints
-- Debug coroutines as separate threads
-
-To use with Love2D, add this configuration to your `.vscode/launch.json`:
-```json
-{
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Debug Love",
-      "type": "lua-local",
-      "request": "launch",
-      "program": {
-        "command": "love"
-      },
-      "args": [
-        "${workspaceFolder}"
-      ],
-      "scriptRoots": [
-        "${workspaceFolder}"
-      ]
-    }
-  ]
-}
+```bash
+love .
 ```
 
-### Love Launcher (JanW.love-launcher)
-A simple extension that allows you to launch your Love2D game with a keyboard shortcut:
-- Press ALT+L to launch your Love2D project
-- Configure the path to your Love2D executable in settings
+Or drag the project folder onto the LÖVE application icon.
 
-### vscode-luacheck (dwenegar.vscode-luacheck)
-Integrates the Luacheck static analyzer into Cursor:
-- Detects various issues in your code
-- Checks for unused variables and functions
-- Identifies potential bugs
-- Works with the included `.luacheckrc` configuration file
+### Controls
 
-### EditorConfig (EditorConfig.EditorConfig)
-Helps maintain consistent coding styles across different editors:
-- Enforces consistent indentation, line endings, and more
-- Works with the included `.editorconfig` file
-- Ensures code style consistency across your team
+| Key | Action |
+|-----|--------|
+| Arrow keys / WASD | Move character |
+| Escape | Quit |
+| F1 | Toggle hitbox/collider display |
+| F9 | Trigger debugger breakpoint |
 
-## Building Your Game
+## Building
 
 ### macOS
-
-Run the included build script:
 
 ```bash
 ./scripts/make.sh
 ```
 
-This will:
-- Create a `.love` file containing your game
-- Package it as a macOS application
-- Create a distributable ZIP file in the `dist/` directory
+Creates a `.love` file and a distributable macOS `.app` bundle in `dist/`.
 
 ### Other Platforms
 
-For Windows and Linux distribution, you can:
-1. Create a `.love` file by zipping your project files
-2. Follow the distribution guidelines on the [Love2D wiki](https://love2d.org/wiki/Game_Distribution)
+Zip the project contents into a `.love` file and follow the [Love2D distribution guide](https://love2d.org/wiki/Game_Distribution).
 
-## Debugging Your Game
+## Development
 
-With the Local Lua Debugger extension, you can:
-1. Set breakpoints in your code by clicking in the gutter next to line numbers
-2. Press F5 to start debugging
-3. Use the debug controls to step through code, inspect variables, and more
-4. Add watches for specific variables
-5. View the call stack and loaded scripts
+### Code Quality
 
-To enable debugging in your Love2D game, add this code at the beginning of your `main.lua`:
+| Tool | Config | Purpose |
+|------|--------|---------|
+| StyLua | `stylua.toml` | Lua code formatter |
+| Luacheck | `.luacheckrc` | Static analysis / linting |
+| EditorConfig | `.editorconfig` | Consistent editor settings |
 
-```lua
-if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
-  require("lldebugger").start()
-end
+### Running Tests
+
+```bash
+busted
 ```
 
-## Development Guidelines
-
-- Organize your code into modules in the `src/` directory
-- Keep game assets in the `assets/` directory
-- Use the linting tools to maintain code quality
-- Follow Love2D best practices for performance and organization
+Tests live under `test/spec/` and use mocked Löve2D modules from `test/mocks/`.
 
 ## License
 
-This template is provided under the MIT License. See the LICENSE file for details.
-
-## Resources
-
-- [Love2D Documentation](https://love2d.org/wiki/Main_Page)
-- [Love2D Forums](https://love2d.org/forums/)
-- [Cursor Documentation](https://cursor.sh/docs) 
+MIT. See [LICENSE](LICENSE) for details.
