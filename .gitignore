@@ -1,0 +1,49 @@
+# Löve2D build artifacts
+*.love
+
+# Lua compiled bytecode
+*.luac
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+\#*\#
+.\#*
+
+# Temporary and log files
+*.log
+*.tmp
+*.temp
+
+# Build and output directories
+build/
+dist/
+out/
+output/
+
+# Linux trash
+.Trash-*
+
+# macOS
+.AppleDouble
+.LSOverride
+Icon
+
+# Windows
+$RECYCLE.BIN/
+
+# helper
+.commands
