@@ -61,7 +61,14 @@ function love.load()
     love.graphics.setDefaultFilter("nearest", "nearest")
 
     -- Create the player at a starting position
-    game.player = Player.new(game.world, 400, 200)
+    local playerLayer = game.map.layers["player"]
+    local spawnX, spawnY = 400, 200 -- fallback
+    if playerLayer and playerLayer.objects and #playerLayer.objects > 0 then
+        local spawnObj = playerLayer.objects[1]
+        spawnX = spawnObj.x
+        spawnY = spawnObj.y
+    end
+    game.player = Player.new(game.world, spawnX, spawnY)
     debug_helpers.log("Player created")
 
     debug_helpers.log(string.format("Map loaded: %dx%d tiles (%dx%d px)", game.map.width, game.map.height, mapW, mapH))

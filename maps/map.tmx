@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.12.2" orientation="orthogonal" renderorder="right-down" width="30" height="30" tilewidth="32" tileheight="32" infinite="0" nextlayerid="4" nextobjectid="15">
+<map version="1.10" tiledversion="1.12.2-2-geb83ddb9" orientation="orthogonal" renderorder="right-down" width="30" height="30" tilewidth="32" tileheight="32" infinite="0" nextlayerid="5" nextobjectid="17">
  <editorsettings>
   <export format="lua"/>
  </editorsettings>
  <tileset firstgid="1" name="ground" tilewidth="32" tileheight="32" tilecount="144" columns="12">
-  <image source="../sprites/ground.png" width="384" height="384"/>
+  <image source="../assets/images/backgrounds/ground.png" width="384" height="384"/>
  </tileset>
  <tileset firstgid="145" name="trees" tilewidth="32" tileheight="32" tilecount="144" columns="12">
-  <image source="../sprites/trees.png" width="384" height="384"/>
+  <image source="../assets/images/backgrounds/trees.png" width="384" height="384"/>
  </tileset>
  <layer id="1" name="ground" width="30" height="30">
   <data encoding="csv">
@@ -88,5 +88,8 @@
   <object id="12" x="399" y="554.167" width="50" height="54"/>
   <object id="13" x="233.333" y="481.167" width="51.6667" height="61.3333"/>
   <object id="14" x="64.2727" y="191.833" width="63.2727" height="64.3333"/>
+ </objectgroup>
+ <objectgroup id="4" name="player">
+  <object id="16" x="640.197" y="384.091" width="32.3333" height="32.1818"/>
  </objectgroup>
 </map>
