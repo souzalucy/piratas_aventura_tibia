@@ -168,6 +168,25 @@ function love.draw()
         game.world:draw()
     end
 
+    -- Draw "E" interaction hint above the NPC when player is within 2 tiles
+    if game.npc:canInteract(game.player.x, game.player.y) then
+        game.npc:drawInteractionHint()
+    end
+    -- Find the closest interactable NPC
+    local closestNpc = nil
+    local closestDist = 64   -- 2 tile threshold
+    for _, npc in ipairs(game.npc) do
+        local d = utils.distance(game.player.x, game.player.y, npc.x, npc.y)
+        if d < closestDist then
+            closestDist = d
+            closestNpc = npc
+        end
+    end
+    if closestNpc then
+        closestNpc:drawInteractionHint()
+    end
+
+
     game.cam:detach()
 
     -- Draw debug information

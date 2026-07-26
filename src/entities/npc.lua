@@ -214,6 +214,19 @@ function NPC:draw()
         DRAW_OFFSET, DRAW_OFFSET)
 end
 
+function NPC:drawInteractionHint()
+    local bubbleX = self.x
+    local bubbleY = self.y - 40
+    local r, g, b, a = love.graphics.getColor()
+
+    love.graphics.setColor(1, 1, 1, 0.85)
+    love.graphics.circle("fill", bubbleX, bubbleY, 12)
+    love.graphics.setColor(0.2, 0.2, 0.2, 1)
+    love.graphics.circle("line", bubbleX, bubbleY, 12)
+    love.graphics.printf("E", bubbleX - 10, bubbleY - 10, 20, "center")
+    love.graphics.setColor(r, g, b, a)
+end
+
 --- Display dialogue when player interacts. Override in specific NPC.
 function NPC:talk()
     debug_helpers.log("NPC:talk() — no dialogue defined", "DEBUG")
