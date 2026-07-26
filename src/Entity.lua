@@ -2,9 +2,13 @@
 local Entity = {}
 Entity.__index = Entity
 
+local debug_helpers = require("src.debug_helpers")
+
 -- Constructor for creating a new entity
 function Entity.new(x, y, width, height)
     local self = setmetatable({}, Entity)
+
+    debug_helpers.log(string.format("Entity.new() at (%d, %d) size %dx%d", x or 0, y or 0, width or 32, height or 32), "DEBUG")
 
     -- Position and dimensions
     self.x = x or 0
@@ -64,6 +68,7 @@ end
 
 -- Set the entity's position
 function Entity:setPosition(x, y)
+    debug_helpers.log(string.format("Entity:setPosition() to (%d, %d)", x or self.x, y or self.y), "DEBUG")
     self.x = x or self.x
     self.y = y or self.y
 end

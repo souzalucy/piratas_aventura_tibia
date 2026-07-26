@@ -1,6 +1,11 @@
 local FoW = {}
+local debug_helpers = require("src.debug_helpers")
+
+-- Track FoW state per visibility grid to avoid per-frame log spam
+local fowState = setmetatable({}, { __mode = "k" })
 
 function FoW.init(gridCols, gridRows)
+    debug_helpers.log(string.format("FoW.init() grid %dx%d", gridCols, gridRows), "DEBUG")
     local visibility = {}
     for col = 1, gridCols do
         visibility[col] = {}
@@ -13,10 +18,14 @@ end
 
 function FoW.update(visibility, px, py, viewRadius, tileW, tileH, gridCols, gridRows)
     -- demote visible → explored
+    local demotedCount = 0
     for col = 1, gridCols do
         local colData = visibility[col]
         for row = 1, gridRows do
-            if colData[row] == 2 then colData[row] = 1 end
+            if colData[row] == 2 then
+                colData[row] = 1
+                demotedCount = demotedCount + 1
+            end
         end
     end
     -- mark new visible tiles
@@ -27,6 +36,7 @@ function FoW.update(visibility, px, py, viewRadius, tileW, tileH, gridCols, grid
     local maxCol = math.min(gridCols, playerCol + viewRadiusTiles)
     local minRow = math.max(1, playerRow - viewRadiusTiles)
     local maxRow = math.min(gridRows, playerRow + viewRadiusTiles)
+    local visibleCount = 0
     for col = minCol, maxCol do
         local colData = visibility[col]
         local tileCenterX = (col - 0.5) * tileW
@@ -36,8 +46,16 @@ function FoW.update(visibility, px, py, viewRadius, tileW, tileH, gridCols, grid
             local dy = tileCenterY - py
             if math.sqrt(dx * dx + dy * dy) <= viewRadius then
                 colData[row] = 2
+                visibleCount = visibleCount + 1
             end
         end
+    end
+
+    -- Log only when tile counts change (player moved to a new area)
+    local prev = fowState[visibility]
+    if not prev or prev.demoted ~= demotedCount or prev.visible ~= visibleCount then
+        debug_helpers.log(string.format("FoW.update: %d demoted, %d visible", demotedCount, visibleCount), "DEBUG")
+        fowState[visibility] = { demoted = demotedCount, visible = visibleCount }
     end
 end
 

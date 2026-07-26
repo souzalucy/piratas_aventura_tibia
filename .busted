@@ -1,0 +1,8 @@
+return {
+    _all = {
+        LUA_PATH = "./?.lua;./?/init.lua;./src/?.lua;./libraries/?.lua;./libraries/?/init.lua;./test/?.lua;./test/?/init.lua;" .. (os.getenv("LUA_PATH") or ""),
+    },
+    default = {
+        ROOT = { "./test/spec" },
+    },
+}

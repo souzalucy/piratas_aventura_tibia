@@ -3,6 +3,7 @@ local Player = {}
 
 local anim8 = require("libraries/anim8")
 local utils = require("src.utils")
+local debug_helpers = require("src.debug_helpers")
 
 -- Sprite frame size (half of the 64px sprite sheet — drawing is offset to center)
 local FRAME_W, FRAME_H = 64, 64
@@ -14,6 +15,8 @@ local HALF_COLLIDER = 16
 
 function Player.new(world, x, y)
     local self = setmetatable({}, { __index = Player })
+
+    debug_helpers.log(string.format("Player.new() at (%d, %d)", x, y), "DEBUG")
 
     -- Position
     self.x = x
@@ -60,6 +63,9 @@ function Player.new(world, x, y)
     self.spriteSheet = self.spriteSheetDown
     self.animations  = self.animation.Down
 
+    -- Track previous direction to avoid log spam
+    self._lastDirection = nil
+
     return self
 end
 
@@ -70,30 +76,41 @@ function Player:handleInput()
     self._vy = 0
     self._isMoving = false
 
+    local newDirection = nil
+
     -- Lines 119-150 of main.lua — 4 directional checks
     if love.keyboard.isDown("right") then
         self._vx = self.speed
         self.animations = self.animation.Right
         self.spriteSheet = self.spriteSheetRight
         self._isMoving = true
+        newDirection = "right"
     end
     if love.keyboard.isDown("left") then
         self._vx = -self.speed
         self.animations = self.animation.Left
         self.spriteSheet = self.spriteSheetLeft
         self._isMoving = true
+        newDirection = "left"
     end
     if love.keyboard.isDown("up") then
         self._vy = -self.speed
         self.animations = self.animation.Up
         self.spriteSheet = self.spriteSheetUp
         self._isMoving = true
+        newDirection = "up"
     end
     if love.keyboard.isDown("down") then
         self._vy = self.speed
         self.animations = self.animation.Down
         self.spriteSheet = self.spriteSheetDown
         self._isMoving = true
+        newDirection = "down"
+    end
+
+    if newDirection ~= self._lastDirection then
+        debug_helpers.log(string.format("Player direction changed: %s", newDirection or "idle"), "DEBUG")
+        self._lastDirection = newDirection
     end
 end
 
@@ -122,8 +139,13 @@ function Player:applyMovement(dt, mapW, mapH)
 
     -- Clamp to map boundaries
     -- Lines 168-171 of main.lua
-    self.x = utils.clamp(self.x, HALF_COLLIDER, mapW - HALF_COLLIDER)
-    self.y = utils.clamp(self.y, HALF_COLLIDER, mapH - HALF_COLLIDER)
+    local clampedX = utils.clamp(self.x, HALF_COLLIDER, mapW - HALF_COLLIDER)
+    local clampedY = utils.clamp(self.y, HALF_COLLIDER, mapH - HALF_COLLIDER)
+    if self.x ~= clampedX or self.y ~= clampedY then
+        debug_helpers.log(string.format("Player clamped to map boundary at (%d, %d)", clampedX, clampedY), "DEBUG")
+    end
+    self.x = clampedX
+    self.y = clampedY
     self.collider:setX(self.x)
     self.collider:setY(self.y)
 end

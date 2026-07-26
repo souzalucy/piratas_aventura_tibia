@@ -64,6 +64,8 @@ function love.load()
     game.player = Player.new(game.world, 400, 200)
     debug_helpers.log("Player created")
 
+    debug_helpers.log(string.format("Map loaded: %dx%d tiles (%dx%d px)", game.map.width, game.map.height, mapW, mapH))
+
     -- Walls: physics only
     if game.map.layers["walls"] then
         for _, obj in pairs(game.map.layers["walls"].objects) do
@@ -71,11 +73,13 @@ function love.load()
             wall:setType("static")
             table.insert(game.walls, wall) -- store reference, not for update/draw loops
         end
+        debug_helpers.log(string.format("Created %d wall colliders", #game.walls))
     end
 
     -- Initialize visibility grid (fog of war)
     -- 0 = unexplored, 1 = explored (out of sight), 2 = currently visible
     game.visibility = FoW.init(gridColumns, gridRows)
+    debug_helpers.log(string.format("Fog of War grid initialized: %dx%d", gridColumns, gridRows))
 end
 
 -- Called every frame to update game state
@@ -154,12 +158,14 @@ end
 function love.keypressed(key)
     -- Quit the game when Escape is pressed
     if key == "escape" then
+        debug_helpers.log("Quit game triggered", "INFO")
         love.event.quit()
     end
 
-    -- uncomment to see colliders
+    -- Toggle collider visibility
     if key == "f1" then
         showColliders = not showColliders
+        debug_helpers.log(string.format("Hitbox display: %s", showColliders and "ON" or "OFF"), "DEBUG")
     end
 
     -- Example of using the debugger function
