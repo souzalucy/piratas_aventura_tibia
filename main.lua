@@ -9,11 +9,12 @@ end
 -- Import modules
 local utils = require("src.utils")
 local debug_helpers = require("src.debug_helpers")
-local anim8 = require("libraries/anim8")
 local camera = require("libraries/camera")
 local sti = require("libraries/sti")
 local wf = require("libraries/windfield")
 local FoW = require("src.fog_of_war")
+local Player = require("src.player")
+
 
 -- Game state variables
 local game = {
@@ -59,37 +60,8 @@ function love.load()
     -- For pixel art games, disable filtering for crisp pixels
     love.graphics.setDefaultFilter("nearest", "nearest")
 
-    -- Create player entity
-    game.player = {}
-    game.player.x = 400
-    game.player.y = 200
-
-    game.player.collider = game.world:newBSGRectangleCollider(400, 200, 32, 32, 4)
-    game.player.collider:setFixedRotation(true)
-    game.player.speed = 50
-
-    game.player.spriteSheetDown = love.graphics.newImage("assets/images/sprites/down.png")
-    game.player.spriteSheetUp = love.graphics.newImage("assets/images/sprites/up.png")
-    game.player.spriteSheetLeft = love.graphics.newImage("assets/images/sprites/left.png")
-    game.player.spriteSheetRight = love.graphics.newImage("assets/images/sprites/right.png")
-
-    game.player.gridDown = anim8.newGrid(64, 64, game.player.spriteSheetDown:getWidth(),
-        game.player.spriteSheetDown:getHeight())
-    game.player.gridUp = anim8.newGrid(64, 64, game.player.spriteSheetUp:getWidth(),
-        game.player.spriteSheetUp:getHeight())
-    game.player.gridLeft = anim8.newGrid(64, 64, game.player.spriteSheetLeft:getWidth(),
-        game.player.spriteSheetLeft:getHeight())
-    game.player.gridRight = anim8.newGrid(64, 64, game.player.spriteSheetRight:getWidth(),
-        game.player.spriteSheetRight:getHeight())
-
-    game.player.animation = {}
-    game.player.animation.Down = anim8.newAnimation(game.player.gridDown('1-9', 1), 0.1)
-    game.player.animation.Up = anim8.newAnimation(game.player.gridUp('1-9', 1), 0.1)
-    game.player.animation.Left = anim8.newAnimation(game.player.gridLeft('1-9', 1), 0.1)
-    game.player.animation.Right = anim8.newAnimation(game.player.gridRight('1-9', 1), 0.1)
-
-    game.player.spriteSheet = game.player.spriteSheetDown
-    game.player.animations = game.player.animation.Down
+    -- Create the player at a starting position
+    game.player = Player.new(game.world, 400, 200)
     debug_helpers.log("Player created")
 
     -- Walls: physics only
@@ -109,71 +81,24 @@ end
 -- Called every frame to update game state
 -- dt is the time elapsed since the last update in seconds
 function love.update(dt)
-    -- Update the physics world
-    local isMoving = false
 
-    local vx = 0
-    local vy = 0
+    -- reads keyboards for Player movement
+    game.player:handleInput()
 
-    -- Handle keyboard input for player movement
-    if love.keyboard.isDown("right") then
-        vx = game.player.speed
-        game.player.animations = game.player.animation.Right
-        game.player.spriteSheet = game.player.spriteSheetRight
-        isMoving = true
-    end
+    -- Player physics + clamp
+    game.player:applyMovement(dt, mapW, mapH)
 
-    if love.keyboard.isDown("left") then
-        vx = -game.player.speed
-        game.player.animations = game.player.animation.Left
-        game.player.spriteSheet = game.player.spriteSheetLeft
-        isMoving = true
-    end
-
-    if love.keyboard.isDown("up") then
-        vy = -game.player.speed
-        game.player.animations = game.player.animation.Up
-        game.player.spriteSheet = game.player.spriteSheetUp
-        isMoving = true
-    end
-
-    if love.keyboard.isDown("down") then
-        vy = game.player.speed
-        game.player.animations = game.player.animation.Down
-        game.player.spriteSheet = game.player.spriteSheetDown
-        isMoving = true
-    end
-
-    -- Normalize diagonal movement
-
-    if vx ~= 0 and vy ~= 0 then
-        vx, vy = utils.normalizeVector(vx, vy, game.player.speed)
-    end
-
-    game.player.collider:setLinearVelocity(vx, vy)
-
-    -- animation logic
-    if isMoving == false then
-        game.player.animations:gotoFrame(1)
-    end
-
-    -- Camera follows the player
+    -- Update camera to follow player
     game.cam:lookAt(game.player.x, game.player.y)
-    -- World update
+
+    -- Update the physics world
     game.world:update(dt)
-    game.player.x = game.player.collider:getX()
-    game.player.y = game.player.collider:getY()
 
-    -- Clamp player to map boundaries (16 = half the 32px collider size)
-    game.player.x = math.max(16, math.min(game.player.x, mapW - 16))
-    game.player.y = math.max(16, math.min(game.player.y, mapH - 16))
-    game.player.collider:setX(game.player.x)
-    game.player.collider:setY(game.player.y)
-
-    -- Fog of War: recompute visibility grid
+    -- Update the fog of war visibility based on player position and view radius
     FoW.update(game.visibility, game.player.x, game.player.y, game.viewRadius, game.map.tilewidth, game.map.tileheight, gridColumns, gridRows)
 
-    game.player.animations:update(dt)
+    -- Update player animations
+    game.player:updateAnimation(dt)
 
     -- Clamp camera to map boundaries
     utils.clampCamera(game.cam, mapW, mapH, vw, vh)
@@ -203,7 +128,9 @@ function love.draw()
     -- Draw the game world
     game.map:drawLayer(game.map.layers["ground"])
     game.map:drawLayer(game.map.layers["trees"])
-    game.player.animations:draw(game.player.spriteSheet, game.player.x, game.player.y, nil, nil, nil, 48, 48)
+
+    -- Draw the player
+    game.player:draw()
 
     -- Fog of War overlay: render over every tile on the map
     -- Cell 0 (unexplored) = opaque black
