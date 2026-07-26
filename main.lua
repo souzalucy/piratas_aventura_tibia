@@ -215,7 +215,7 @@ function love.keypressed(key)
 
     if key == "e" then
         if game.npc:canInteract(game.player.x, game.player.y) then
-            game.npc:talk()
+            game.npc:talk(game.player.x, game.player.y)
         end
     end
 end

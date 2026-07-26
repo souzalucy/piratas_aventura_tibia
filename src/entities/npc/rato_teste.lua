@@ -63,10 +63,11 @@ function RatoTeste:update(dt, mapW, mapH)
     end
 end
 
-function RatoTeste:talk()
+function RatoTeste:talk(playerX, playerY)
+    NPC.talk(self, playerX, playerY)  -- stop + face first
     debug_helpers.log("RatoTeste: *squeak* Ahoy, matey! I'm just a test rat.", "INFO")
-    -- TODO: future dialogue UI goes here
 end
+
 
 --- Private: random pause duration between 2-4 seconds
 function RatoTeste._randomPause()

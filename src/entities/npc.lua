@@ -227,8 +227,45 @@ function NPC:drawInteractionHint()
     love.graphics.setColor(r, g, b, a)
 end
 
+-- Face towards a target position (sets sprite direction, freezes on frame 1)
+function NPC:faceTowards(targetX, targetY)
+    local dx = targetX - self.x
+    local dy = targetY - self.y
+
+    if math.abs(dx) >= math.abs(dy) then
+        if dx > 0 then
+            self.animations = self.animation.Right
+            self.spriteSheet = self.spriteSheetRight
+        else
+            self.animations = self.animation.Left
+            self.spriteSheet = self.spriteSheetLeft
+        end
+    else
+        if dy > 0 then
+            self.animations = self.animation.Down
+            self.spriteSheet = self.spriteSheetDown
+        else
+            self.animations = self.animation.Up
+            self.spriteSheet = self.spriteSheetUp
+        end
+    end
+    self.animations:gotoFrame(1)
+end
+
 --- Display dialogue when player interacts. Override in specific NPC.
-function NPC:talk()
+function NPC:talk(playerX, playerY)
+    -- Stop any walking
+    self.state = STATE.IDLE
+    self._targetX = nil
+    self._targetY = nil
+    self._vx = 0
+    self._vy = 0
+
+    -- Turn to face the player
+    if playerX and playerY then
+        self:faceTowards(playerX, playerY)
+    end
+
     debug_helpers.log("NPC:talk() — no dialogue defined", "DEBUG")
 end
 
