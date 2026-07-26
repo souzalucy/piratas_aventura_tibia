@@ -68,11 +68,14 @@ function NPC.new(world, x, y, sprite_prefix)
     self._inDialogue = false
     self._currentDialogueId = 0
 
+    debug_helpers.log(string.format("NPC created at (%d, %d) with prefix '%s'", x, y, sprite_prefix), "DEBUG")
+
     return self
 end
 
 --- Set a walk destination. NPC will move toward it each update.
 function NPC:walkTo(targetX, targetY)
+    debug_helpers.log(string.format("NPC walking to (%d, %d)", targetX, targetY), "DEBUG")
     self._targetX = targetX
     self._targetY = targetY
     self.state = STATE.WALKING
@@ -100,6 +103,7 @@ function NPC:update(dt, mapW, mapH)
 
         if dist < 2 then
             -- Arrived
+            debug_helpers.log(string.format("NPC arrived at (%d, %d), entering idle", self.x, self.y), "DEBUG")
             self._vx = 0
             self._vy = 0
             self.state = STATE.IDLE
@@ -147,6 +151,7 @@ function NPC:update(dt, mapW, mapH)
         self.collider:setX(self.x)
         self.collider:setY(self.y)
         -- Stop walking if we hit a wall
+        debug_helpers.log(string.format("NPC clamped to (%d, %d), stopping walk", clampedX, clampedY), "DEBUG")
         self.state = STATE.IDLE
         self._targetX = nil
         self._targetY = nil
@@ -302,6 +307,7 @@ function NPC:startDialogue(playerX, playerY)
     self._inDialogue = true
     self._currentDialogueId = 1
     self:faceTowards(playerX, playerY)
+    debug_helpers.log(string.format("NPC: dialogue started, entry 1/%d", #self.dialogue), "DEBUG")
 end
 
 function NPC:advanceDialogue()
@@ -309,7 +315,7 @@ function NPC:advanceDialogue()
 
     local entry = self.dialogue[self._currentDialogueId]
     if not entry then
-        self._endDialogue()
+        self:_endDialogue()
         return
     end
 
@@ -317,6 +323,7 @@ function NPC:advanceDialogue()
     if entry.choices then return end
 
     -- No choices: advance to next or close
+    debug_helpers.log(string.format("NPC: advancing dialogue %d -> %d", self._currentDialogueId, self._currentDialogueId + 1), "DEBUG")
     self._currentDialogueId = self._currentDialogueId + 1
     if self._currentDialogueId > #self.dialogue then
         self:_endDialogue()
@@ -331,6 +338,7 @@ function NPC:handleDialogueInput(key)
 
     for _, choice in ipairs(entry.choices) do
         if key == choice.key then
+            debug_helpers.log(string.format("NPC: dialogue choice '%s' -> entry %d", key, choice.next), "DEBUG")
             self._currentDialogueId = choice.next
             return true
         end
@@ -339,6 +347,7 @@ function NPC:handleDialogueInput(key)
 end
 
 function NPC:_endDialogue()
+    debug_helpers.log("NPC: dialogue ended", "DEBUG")
     self._inDialogue = false
     self._currentDialogueId = 0
 end

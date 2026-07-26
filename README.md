@@ -10,6 +10,7 @@ Explore a tile-based world with pixel art sprites, physics-based movement, and a
 
 - **Pixel Art Character**: 4-directional animated sprites (up/down/left/right) with 9-frame walk cycles
 - **Physics-Based Movement**: Diagonal normalization, map boundary clamping via windfield colliders
+- **NPC System**: Interactive NPCs with dialogue trees, choice-based branching, and wandering AI
 - **Fog of War**: Tiles transition from unexplored → explored → visible based on player proximity
 - **Smooth Camera**: Follows the player with boundary clamping
 - **Tile Map**: Ground and tree layers rendered via STI
@@ -22,11 +23,20 @@ Explore a tile-based world with pixel art sprites, physics-based movement, and a
 │       ├── backgrounds/ # Map tiles (ground, trees)
 │       └── sprites/     # Player directional sprites
 ├── src/                 # Game source code
-│   ├── player.lua       # Player entity (input, movement, animation)
+│   ├── debug_helpers.lua # Debug logging, watches, overlay
 │   ├── fog_of_war.lua   # Fog of war visibility system
-│   ├── Entity.lua       # Base entity class
 │   ├── utils.lua        # Math and camera utilities
-│   └── debug_helpers.lua # Debug logging, watches, overlay
+│   └── entities/        # Game entities
+│       ├── Entity.lua   # Base entity class
+│       ├── player.lua   # Player entity (input, movement, animation)
+│       ├── npc.lua      # NPC base class (dialogue, walk-to, interaction)
+│       ├── npc/
+│       │   ├── init.lua # NPC loader module
+│       │   └── rato_teste.lua # Example NPC with wandering and dialogue
+│       ├── effects/
+│       │   └── init.lua
+│       └── items/
+│           └── init.lua
 ├── libraries/           # Third-party libraries
 │   ├── anim8.lua        # Sprite animation
 │   ├── camera.lua       # Camera system
@@ -61,6 +71,8 @@ Or drag the project folder onto the LÖVE application icon.
 | Key | Action |
 |-----|--------|
 | Arrow keys / WASD | Move character |
+| E | Interact with NPC / advance dialogue |
+| Y / N | Select dialogue choices |
 | Escape | Quit |
 | F1 | Toggle hitbox/collider display |
 | F9 | Trigger debugger breakpoint |

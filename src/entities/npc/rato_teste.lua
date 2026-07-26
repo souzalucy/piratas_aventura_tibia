@@ -70,6 +70,7 @@ function RatoTeste:update(dt, mapW, mapH)
             self.originY + math.sin(angle) * distance,
             HALF_COLLIDER, mapH - HALF_COLLIDER)
 
+        debug_helpers.log(string.format("RatoTeste wandering to (%d, %d)", targetX, targetY), "DEBUG")
         self:walkTo(targetX, targetY)
 
         -- Reset pause timer for after arrival

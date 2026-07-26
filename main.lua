@@ -205,15 +205,17 @@ function love.keypressed(key)
     if key == "e" then
         if game.npc._inDialogue then
             -- In dialogue: advance or handle choice
+            debug_helpers.log("Key 'e' pressed — advancing dialogue", "DEBUG")
             game.npc:advanceDialogue()
         elseif game.npc:canInteract(game.player.x, game.player.y) then
+            debug_helpers.log("Key 'e' pressed — starting dialogue with NPC", "DEBUG")
             game.npc:startDialogue(game.player.x, game.player.y)
         end
     end
 
     if key == "y" or key == "n" then
         if game.npc:handleDialogueInput(key) then
-        -- choice was handled, nothing else needed
+            debug_helpers.log(string.format("Key '%s' — dialogue choice handled", key), "DEBUG")
         end
     end
 end
