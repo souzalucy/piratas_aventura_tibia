@@ -42,8 +42,6 @@ local gridRows    = game.map.height
 
 -- cam limits
 local vw, vh = game.vw, game.vh
-local halfVW = vw / 2
-local halfVH = vh / 2
 
 -- Genral local variables
 local showColliders = false
@@ -214,25 +212,8 @@ function love.update(dt)
 
     game.player.animations:update(dt)
 
-    -- Left edge
-    if game.cam.x < halfVW then
-        game.cam.x = halfVW
-    end
-
-    -- Top edge
-    if game.cam.y < halfVH then
-        game.cam.y = halfVH
-    end
-
-    -- Right edge (only when map is wider than viewport)
-    if vw < mapW and game.cam.x > mapW - halfVW then
-        game.cam.x = mapW - halfVW
-    end
-
-    -- Bottom edge (only when map is taller than viewport)
-    if vh < mapH and game.cam.y > mapH - halfVH then
-        game.cam.y = mapH - halfVH
-    end
+    -- Clamp camera to map boundaries
+    utils.clampCamera(game.cam, mapW, mapH, vw, vh)
 
     -- Update debug watches
     debug_helpers.watch("player_pos", { x = game.player.x, y = game.player.y })

@@ -28,6 +28,15 @@ function utils.normalizeVector(vx, vy, speed)
     return (vx / length) * speed, (vy / length) * speed
 end
 
+-- Clamp camera position to stay within map boundaries
+function utils.clampCamera(cam, mapW, mapH, vw, vh)
+    local halfVW, halfVH = vw / 2, vh / 2
+    if cam.x < halfVW then cam.x = halfVW end
+    if cam.y < halfVH then cam.y = halfVH end
+    if vw < mapW and cam.x > mapW - halfVW then cam.x = mapW - halfVW end
+    if vh < mapH and cam.y > mapH - halfVH then cam.y = mapH - halfVH end
+end
+
 -- Color utilities
 utils.colors = {
     -- Basic colors
