@@ -100,3 +100,7 @@ Tests live under `test/spec/` and use mocked Löve2D modules from `test/mocks/`.
 ## License
 
 MIT. See [LICENSE](LICENSE) for details.
+
+## Credits
+
+This project was bootstrapped from the [love2d-cursor-template](https://github.com/tijs/love2d-cursor-template) by [Tijs](https://github.com/tijs).
