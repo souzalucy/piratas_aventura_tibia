@@ -13,14 +13,16 @@ local camera = require("libraries/camera")
 local sti = require("libraries/sti")
 local wf = require("libraries/windfield")
 local FoW = require("src.fog_of_war")
-local Player = require("src/entities/player")
+local Player = require("src.entities.player")
+local Npc = require("src.entities.npc.rato_teste")
 
 
 -- Game state variables
-local game = {
+local game          = {
     background_color = { 0.1, 0.1, 0.2 },
     entities = {},
     player = nil,
+    npc = nil,
     -- create camera
     cam = camera(),
     -- world creation
@@ -35,15 +37,15 @@ local game = {
 }
 
 -- Get the map dimensions
-local mapW = game.map.width * game.map.tilewidth
-local mapH = game.map.height * game.map.tileheight
+local mapW          = game.map.width * game.map.tilewidth
+local mapH          = game.map.height * game.map.tileheight
 
 -- Grid size for the map
-local gridColumns = game.map.width
-local gridRows    = game.map.height
+local gridColumns   = game.map.width
+local gridRows      = game.map.height
 
 -- cam limits
-local vw, vh = game.vw, game.vh
+local vw, vh        = game.vw, game.vh
 
 -- Genral local variables
 local showColliders = false
@@ -63,9 +65,17 @@ function love.load()
     -- Create the player at a starting position
     -- Get spawn position from map's "player" object layer
     local playerSpawnPoints = utils.getObjectPositions(game.map, "player")
-    local playerSpawnX, playerSpawnY = playerSpawnPoints[1] and playerSpawnPoints[1].x or 400, playerSpawnPoints[1] and playerSpawnPoints[1].y or 200
+    local playerSpawnX, playerSpawnY = playerSpawnPoints[1] and playerSpawnPoints[1].x or 400,
+        playerSpawnPoints[1] and playerSpawnPoints[1].y or 200
     game.player = Player.new(game.world, playerSpawnX, playerSpawnY)
     debug_helpers.log("Player created")
+
+    -- Get spawn position from map's "npc" object layer
+    local npcSpawnPoints = utils.getObjectPositions(game.map, "npc")
+    local npcSpawnX, npcSpawnY = npcSpawnPoints[1] and npcSpawnPoints[1].x or 400,
+        npcSpawnPoints[1] and npcSpawnPoints[1].y or 200
+    game.npc = Npc.new(game.world, npcSpawnX, npcSpawnY)
+    debug_helpers.log("NPC created")
 
     debug_helpers.log(string.format("Map loaded: %dx%d tiles (%dx%d px)", game.map.width, game.map.height, mapW, mapH))
 
@@ -88,12 +98,15 @@ end
 -- Called every frame to update game state
 -- dt is the time elapsed since the last update in seconds
 function love.update(dt)
-
     -- reads keyboards for Player movement
     game.player:handleInput()
 
     -- Player physics + clamp
     game.player:applyMovement(dt, mapW, mapH)
+
+    -- Update NPC
+    game.npc:update(dt, mapW, mapH)
+    game.npc:updateAnimation(dt)
 
     -- Update camera to follow player
     game.cam:lookAt(game.player.x, game.player.y)
@@ -102,7 +115,8 @@ function love.update(dt)
     game.world:update(dt)
 
     -- Update the fog of war visibility based on player position and view radius
-    FoW.update(game.visibility, game.player.x, game.player.y, game.viewRadius, game.map.tilewidth, game.map.tileheight, gridColumns, gridRows)
+    FoW.update(game.visibility, game.player.x, game.player.y, game.viewRadius, game.map.tilewidth, game.map.tileheight,
+        gridColumns, gridRows)
 
     -- Update player animations
     game.player:updateAnimation(dt)
@@ -138,6 +152,9 @@ function love.draw()
 
     -- Draw the player
     game.player:draw()
+
+    -- Draw the NPC
+    game.npc:draw()
 
     -- Fog of War overlay: render over every tile on the map
     -- Cell 0 (unexplored) = opaque black
@@ -175,5 +192,11 @@ function love.keypressed(key)
     if key == "f9" then
         debug_helpers.log("Manual breakpoint triggered", "DEBUG")
         debugger() -- This will pause execution if the debugger is active
+    end
+
+    if key == "e" then
+        if game.npc:canInteract(game.player.x, game.player.y) then
+            game.npc:talk()
+        end
     end
 end
