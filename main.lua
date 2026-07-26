@@ -13,6 +13,7 @@ local anim8 = require("libraries/anim8")
 local camera = require("libraries/camera")
 local sti = require("libraries/sti")
 local wf = require("libraries/windfield")
+local FoW = require("src.fog_of_war")
 
 -- Game state variables
 local game = {
@@ -102,12 +103,7 @@ function love.load()
 
     -- Initialize visibility grid (fog of war)
     -- 0 = unexplored, 1 = explored (out of sight), 2 = currently visible
-    for col = 1, gridColumns do
-        game.visibility[col] = {}
-        for row = 1, gridRows do
-            game.visibility[col][row] = 0
-        end
-    end
+    game.visibility = FoW.init(gridColumns, gridRows)
 end
 
 -- Called every frame to update game state
@@ -175,40 +171,7 @@ function love.update(dt)
     game.player.collider:setY(game.player.y)
 
     -- Fog of War: recompute visibility grid
-    local tileW, tileH = game.map.tilewidth, game.map.tileheight
-    local viewRadiusTiles = math.ceil(game.viewRadius / tileW)
-
-    -- Demote all currently-visible cells to explored
-    for col = 1, gridColumns do
-        local colData = game.visibility[col]
-        for row = 1, gridRows do
-            if colData[row] == 2 then
-                colData[row] = 1
-            end
-        end
-    end
-
-    -- Mark tiles within viewRadius as visible
-    local playerCol = math.floor(game.player.x / tileW) + 1
-    local playerRow = math.floor(game.player.y / tileH) + 1
-    local minCol = math.max(1, playerCol - viewRadiusTiles)
-    local maxCol = math.min(gridColumns, playerCol + viewRadiusTiles)
-    local minRow = math.max(1, playerRow - viewRadiusTiles)
-    local maxRow = math.min(gridRows, playerRow + viewRadiusTiles)
-    local px, py = game.player.x, game.player.y
-
-    for col = minCol, maxCol do
-        local colData = game.visibility[col]
-        local tileCenterX = (col - 0.5) * tileW
-        for row = minRow, maxRow do
-            local tileCenterY = (row - 0.5) * tileH
-            local dx = tileCenterX - px
-            local dy = tileCenterY - py
-            if math.sqrt(dx * dx + dy * dy) <= game.viewRadius then
-                colData[row] = 2
-            end
-        end
-    end
+    FoW.update(game.visibility, game.player.x, game.player.y, game.viewRadius, game.map.tilewidth, game.map.tileheight, gridColumns, gridRows)
 
     game.player.animations:update(dt)
 
@@ -246,21 +209,8 @@ function love.draw()
     -- Cell 0 (unexplored) = opaque black
     -- Cell 1 (explored, out of sight) = dimmed
     -- Cell 2 (visible) = nothing drawn — tile shows through
-    local tileW, tileH = game.map.tilewidth, game.map.tileheight
-    for col = 1, gridColumns do
-        local colData = game.visibility[col]
-        local worldX = (col - 1) * tileW
-        for row = 1, gridRows do
-            local cell = colData[row]
-            if cell == 0 then
-                love.graphics.setColor(0, 0, 0, 1)
-                love.graphics.rectangle("fill", worldX, (row - 1) * tileH, tileW, tileH)
-            elseif cell == 1 then
-                love.graphics.setColor(0, 0, 0, 0.6)
-                love.graphics.rectangle("fill", worldX, (row - 1) * tileH, tileW, tileH)
-            end
-        end
-    end
+    FoW.draw(game.visibility, game.map.tilewidth, game.map.tileheight, gridColumns, gridRows)
+
     love.graphics.setColor(1, 1, 1, 1)
 
     if showColliders then
