@@ -25,8 +25,24 @@ local game = {
     world = wf.newWorld(0, 0),
     -- create the map
     map = sti("maps/map.lua"),
-    walls = {} -- wall colliders — physics only, no update/drawable
+    walls = {}, -- wall colliders — physics only, no update/drawable
+    vw = 200,
+    vh = 200
 }
+
+-- Get the map dimensions
+local mapW = game.map.width * game.map.tilewidth
+local mapH = game.map.height * game.map.tileheight
+
+-- Get the window dimensions
+local w, h = love.graphics.getDimensions()
+local halfW = math.min(w, mapW) / 2
+local halfH = math.min(h, mapH) / 2
+
+-- cam limits
+local vw, vh = game.vw, game.vh
+local halfVW = vw / 2
+local halfVH = vh / 2
 
 -- Genral local variables
 local showColliders = false
@@ -145,37 +161,28 @@ function love.update(dt)
 
     game.player.animations:update(dt)
 
+    -- Left edge
+    if game.cam.x < halfVW then
+        game.cam.x = halfVW
+    end
+
+    -- Top edge
+    if game.cam.y < halfVH then
+        game.cam.y = halfVH
+    end
+
+    -- Right edge (only when map is wider than viewport)
+    if vw < mapW and game.cam.x > mapW - halfVW then
+        game.cam.x = mapW - halfVW
+    end
+
+    -- Bottom edge (only when map is taller than viewport)
+    if vh < mapH and game.cam.y > mapH - halfVH then
+        game.cam.y = mapH - halfVH
+    end
+    
     -- Camera follows the player
     game.cam:lookAt(game.player.x, game.player.y)
-
-    -- Get the map dimensions
-    local mapW = game.map.width * game.map.tilewidth
-    local mapH = game.map.height * game.map.tileheight
-
-    -- Get the window dimensions
-    local w, h = love.graphics.getDimensions()
-    local halfW = math.min(w, mapW) / 2
-    local halfH = math.min(h, mapH) / 2
-
-    -- cam limit to left boarder
-    if game.cam.x < halfW then
-        game.cam.x = halfW
-    end
-
-    -- cam limit to top boarder
-    if game.cam.y < halfH then
-        game.cam.y = halfH
-    end
-
-    -- cam limit to right boarder
-    if w < mapW and game.cam.x > mapW - halfW then
-        game.cam.x = mapW - halfW
-    end
-
-    -- cam limit to bottom boarder
-    if h < mapH and game.cam.y > mapH - halfH then
-        game.cam.y = mapH - halfH
-    end
 
     -- Update debug watches
     debug_helpers.watch("player_pos", { x = game.player.x, y = game.player.y })
@@ -193,7 +200,15 @@ function love.draw()
     love.graphics.print("Press Escape to quit", 10, 30)
     love.graphics.print("Press F1 to toggle hitboxes", 10, 50)
 
-    game.cam:attach()
+
+    -- Draw the game world
+
+    -- Set up a viewport for the game world
+
+
+
+    -- Attach the camera to follow the player
+    game.cam:attach(halfW, halfH, game.vw, game.vh)
     game.map:drawLayer(game.map.layers["ground"])
     game.map:drawLayer(game.map.layers["trees"])
     game.player.animations:draw(game.player.spriteSheet, game.player.x, game.player.y, nil, nil, nil, 48, 48)
