@@ -37,6 +37,18 @@ function utils.clampCamera(cam, mapW, mapH, vw, vh)
     if vh < mapH and cam.y > mapH - halfVH then cam.y = mapH - halfVH end
 end
 
+--- Get objects from a named object layer
+-- Returns a table of {x, y, width, height, properties} for each object
+function utils.getObjectPositions(map, layerName)
+    local layer = map.layers[layerName]
+    if not layer or not layer.objects then return {} end
+    local objects = {}
+    for _, obj in ipairs(layer.objects) do
+        table.insert(objects, { x = obj.x, y = obj.y, width = obj.width, height = obj.height, properties = obj.properties })
+    end
+    return objects
+end
+
 -- Color utilities
 utils.colors = {
     -- Basic colors

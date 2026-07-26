@@ -2,8 +2,8 @@
 local Player = {}
 
 local anim8 = require("libraries/anim8")
-local utils = require("src.utils")
-local debug_helpers = require("src.debug_helpers")
+local utils = require("src/utils")
+local debug_helpers = require("src/debug_helpers")
 
 -- Sprite frame size (half of the 64px sprite sheet — drawing is offset to center)
 local FRAME_W, FRAME_H = 64, 64
@@ -34,13 +34,12 @@ function Player.new(world, x, y)
 
     -- === Sprite sheets (4 directional) ===
     -- Lines 71-74 of main.lua
-    self.spriteSheetDown  = love.graphics.newImage("assets/images/sprites/down.png")
-    self.spriteSheetUp    = love.graphics.newImage("assets/images/sprites/up.png")
-    self.spriteSheetLeft  = love.graphics.newImage("assets/images/sprites/left.png")
-    self.spriteSheetRight = love.graphics.newImage("assets/images/sprites/right.png")
+    self.spriteSheetDown  = love.graphics.newImage("assets/images/sprites/player/down.png")
+    self.spriteSheetUp    = love.graphics.newImage("assets/images/sprites/player/up.png")
+    self.spriteSheetLeft  = love.graphics.newImage("assets/images/sprites/player/left.png")
+    self.spriteSheetRight = love.graphics.newImage("assets/images/sprites/player/right.png")
 
     -- === Animation grids ===
-    -- Lines 76-83 of main.lua
     self.gridDown  = anim8.newGrid(FRAME_W, FRAME_H,
         self.spriteSheetDown:getWidth(),  self.spriteSheetDown:getHeight())
     self.gridUp    = anim8.newGrid(FRAME_W, FRAME_H,
