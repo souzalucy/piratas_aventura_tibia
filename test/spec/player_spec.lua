@@ -16,7 +16,7 @@ end
 -- Player requires them normally; that should work since they're in package.path
 
 local wf = require("libraries/windfield")
-local Player = require("src.player")
+local Player = require("src/entities/player")
 
 describe("Player.new", function()
     local world

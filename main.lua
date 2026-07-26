@@ -13,7 +13,7 @@ local camera = require("libraries/camera")
 local sti = require("libraries/sti")
 local wf = require("libraries/windfield")
 local FoW = require("src.fog_of_war")
-local Player = require("src.player")
+local Player = require("src/entities/player")
 
 
 -- Game state variables
