@@ -7,7 +7,7 @@ if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
 end
 
 -- Import modules
---local utils = require("src.utils")
+local utils = require("src.utils")
 local debug_helpers = require("src.debug_helpers")
 local anim8 = require("libraries/anim8")
 local camera = require("libraries/camera")
@@ -151,10 +151,9 @@ function love.update(dt)
     end
 
     -- Normalize diagonal movement
+
     if vx ~= 0 and vy ~= 0 then
-        local length = math.sqrt(vx * vx + vy * vy)
-        vx = vx / length * game.player.speed
-        vy = vy / length * game.player.speed
+        vx, vy = utils.normalizeVector(vx, vy, game.player.speed)
     end
 
     game.player.collider:setLinearVelocity(vx, vy)

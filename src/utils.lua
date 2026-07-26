@@ -21,6 +21,13 @@ function utils.lerp(a, b, t)
     return a + (b - a) * t
 end
 
+-- Normalize vector for diagonal movement
+function utils.normalizeVector(vx, vy, speed)
+    if vx == 0 and vy == 0 then return 0, 0 end
+    local length = math.sqrt(vx * vx + vy * vy)
+    return (vx / length) * speed, (vy / length) * speed
+end
+
 -- Color utilities
 utils.colors = {
     -- Basic colors
