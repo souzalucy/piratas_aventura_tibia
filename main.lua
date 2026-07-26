@@ -164,6 +164,9 @@ function love.draw()
 
     love.graphics.setColor(1, 1, 1, 1)
 
+    -- UI layer (rendered AFTER fog, always visible)
+    game.npc:drawUI(game.player.x, game.player.y)
+
     if showColliders then
         game.world:draw()
     end
@@ -172,20 +175,6 @@ function love.draw()
     if game.npc:canInteract(game.player.x, game.player.y) then
         game.npc:drawInteractionHint()
     end
-    -- Find the closest interactable NPC
-    local closestNpc = nil
-    local closestDist = 64   -- 2 tile threshold
-    for _, npc in ipairs(game.npc) do
-        local d = utils.distance(game.player.x, game.player.y, npc.x, npc.y)
-        if d < closestDist then
-            closestDist = d
-            closestNpc = npc
-        end
-    end
-    if closestNpc then
-        closestNpc:drawInteractionHint()
-    end
-
 
     game.cam:detach()
 
@@ -214,8 +203,17 @@ function love.keypressed(key)
     end
 
     if key == "e" then
-        if game.npc:canInteract(game.player.x, game.player.y) then
-            game.npc:talk(game.player.x, game.player.y)
+        if game.npc._inDialogue then
+            -- In dialogue: advance or handle choice
+            game.npc:advanceDialogue()
+        elseif game.npc:canInteract(game.player.x, game.player.y) then
+            game.npc:startDialogue(game.player.x, game.player.y)
+        end
+    end
+
+    if key == "y" or key == "n" then
+        if game.npc:handleDialogueInput(key) then
+        -- choice was handled, nothing else needed
         end
     end
 end

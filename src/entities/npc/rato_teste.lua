@@ -23,6 +23,21 @@ function RatoTeste.new(world, x, y)
     -- Override metatable so RatoTeste methods take priority over NPC
     setmetatable(self, RatoTeste)
 
+    self.dialogue = {
+        {
+            text = "Ahoy, matey! Are ye lost?",
+            choices = {
+                { key = "y", text = "[Y] Yes", next = 2 },
+                { key = "n", text = "[N] No",  next = 3 },
+            }
+        },
+        {
+            text = "You're aboard the mighty Pirate Ship, docked at Tortuga Harbor. The captain's quarters be to the north, and the cargo hold below deck. Watch yer step, sailor!"
+        },
+        {
+            text = "Good day to you then! Safe travels, and may the winds be at yer back!"
+        }
+    }
     -- Wandering state
     self.originX = x
     self.originY = y
@@ -62,12 +77,6 @@ function RatoTeste:update(dt, mapW, mapH)
         self._wanderWaitDuration = RatoTeste._randomPause()
     end
 end
-
-function RatoTeste:talk(playerX, playerY)
-    NPC.talk(self, playerX, playerY)  -- stop + face first
-    debug_helpers.log("RatoTeste: *squeak* Ahoy, matey! I'm just a test rat.", "INFO")
-end
-
 
 --- Private: random pause duration between 2-4 seconds
 function RatoTeste._randomPause()

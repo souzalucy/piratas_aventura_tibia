@@ -63,6 +63,11 @@ function NPC.new(world, x, y, sprite_prefix)
     self.spriteSheet      = self.spriteSheetDown
     self.animations       = self.animation.Down
 
+    -- Dialogue state
+    self.dialogue = {}
+    self._inDialogue = false
+    self._currentDialogueId = 0
+
     return self
 end
 
@@ -73,65 +78,16 @@ function NPC:walkTo(targetX, targetY)
     self.state = STATE.WALKING
 end
 
-function NPC:update(dt)
-    -- Sync position from physics
-    self.x = self.collider:getX()
-    self.y = self.collider:getY()
-
-    if self.state == STATE.WALKING and self._targetX and self._targetY then
-        local dx = self._targetX - self.x
-        local dy = self._targetY - self.y
-        local dist = math.sqrt(dx * dx + dy * dy)
-
-        if dist < 2 then
-            -- Arrived
-            self._vx = 0
-            self._vy = 0
-            self.state = STATE.IDLE
-            self._targetX = nil
-            self._targetY = nil
-        else
-            self._vx = (dx / dist) * self.speed
-            self._vy = (dy / dist) * self.speed
-
-            -- Set animation direction based on dominant axis
-            if math.abs(dx) >= math.abs(dy) then
-                if dx > 0 then
-                    self.animations = self.animation.Right
-                    self.spriteSheet = self.spriteSheetRight
-                else
-                    self.animations = self.animation.Left
-                    self.spriteSheet = self.spriteSheetLeft
-                end
-            else
-                if dy > 0 then
-                    self.animations = self.animation.Down
-                    self.spriteSheet = self.spriteSheetDown
-                else
-                    self.animations = self.animation.Up
-                    self.spriteSheet = self.spriteSheetUp
-                end
-            end
-        end
-    else
-        -- Idle: freeze on frame 1
+function NPC:update(dt, mapW, mapH)
+    -- Freeze all movement during dialogue
+    if self._inDialogue then
         self._vx = 0
         self._vy = 0
+        self.collider:setLinearVelocity(0, 0)
         self.animations:gotoFrame(1)
+        return
     end
 
-    -- Apply velocity to collider
-    self.collider:setLinearVelocity(self._vx, self._vy)
-end
-
---- Set a walk destination. NPC will move toward it each update.
-function NPC:walkTo(targetX, targetY)
-    self._targetX = targetX
-    self._targetY = targetY
-    self.state = STATE.WALKING
-end
-
-function NPC:update(dt, mapW, mapH)
     -- Sync position from physics
     self.x = self.collider:getX()
     self.y = self.collider:getY()
@@ -214,6 +170,21 @@ function NPC:draw()
         DRAW_OFFSET, DRAW_OFFSET)
 end
 
+function NPC:drawUI(playerX, playerY)
+    -- Dialogue bubble (always on top of fog)
+    if self._inDialogue then
+        local entry = self.dialogue[self._currentDialogueId]
+        if entry then
+            self:_drawDialogueBubble(entry.text, entry.choices)
+        end
+    end
+
+    -- "E" interaction hint
+    if not self._inDialogue and playerX and playerY and self:canInteract(playerX, playerY) then
+        self:drawInteractionHint()
+    end
+end
+
 function NPC:drawInteractionHint()
     local bubbleX = self.x
     local bubbleY = self.y - 40
@@ -225,6 +196,46 @@ function NPC:drawInteractionHint()
     love.graphics.circle("line", bubbleX, bubbleY, 12)
     love.graphics.printf("E", bubbleX - 10, bubbleY - 10, 20, "center")
     love.graphics.setColor(r, g, b, a)
+end
+
+function NPC:_drawDialogueBubble(text, choices)
+    local font = love.graphics.getFont()
+    local lineHeight = font:getHeight() + 2
+    local maxWidth = 200
+
+    -- Build display text: main text + choice hints
+    local displayText = text
+    if choices then
+        displayText = displayText .. "\n"
+        for _, c in ipairs(choices) do
+            displayText = displayText .. "\n  " .. c.text
+        end
+    else
+        displayText = displayText .. "\n\n  [E] Continue"
+    end
+
+    local _, wrappedLines = font:getWrap(displayText, maxWidth)
+    local boxHeight = #wrappedLines * lineHeight + 16
+    local boxWidth = maxWidth + 16
+    local bx = self.x - boxWidth / 2
+    local by = self.y - 60 - boxHeight
+
+    -- Bubble background
+    love.graphics.setColor(0.05, 0.05, 0.08, 0.9)
+    love.graphics.rectangle("fill", bx, by, boxWidth, boxHeight, 6, 6)
+    love.graphics.setColor(0.7, 0.7, 0.7, 0.9)
+    love.graphics.rectangle("line", bx, by, boxWidth, boxHeight, 6, 6)
+
+    -- Tail
+    love.graphics.setColor(0.05, 0.05, 0.08, 0.9)
+    love.graphics.polygon("fill", self.x - 6, self.y - 48, self.x + 6, self.y - 48, self.x, self.y - 40)
+
+    -- Text (white, wrapped)
+    love.graphics.setColor(1, 1, 1, 1)
+    for i, line in ipairs(wrappedLines) do
+        love.graphics.print(line, bx + 8, by + 4 + (i - 1) * lineHeight)
+    end
+    love.graphics.setColor(1, 1, 1, 1)
 end
 
 -- Face towards a target position (sets sprite direction, freezes on frame 1)
@@ -266,7 +277,70 @@ function NPC:talk(playerX, playerY)
         self:faceTowards(playerX, playerY)
     end
 
-    debug_helpers.log("NPC:talk() — no dialogue defined", "DEBUG")
+    if not self._showDialogue then
+        -- First press: start dialogue
+        self._dialogueIndex = 1
+        self._showDialogue = true
+    else
+        -- Subsequent presses: advance or close
+        if self._dialogueIndex < #self.dialogue then
+            self._dialogueIndex = self._dialogueIndex + 1
+        else
+            self._showDialogue = false
+            self._dialogueIndex = 0
+            return  -- don't reset timer
+        end
+    end
+    self._dialogueTimer = 0
+end
+
+function NPC:startDialogue(playerX, playerY)
+    if #self.dialogue == 0 then
+        debug_helpers.log("NPC: no dialogue defined", "DEBUG")
+        return
+    end
+    self._inDialogue = true
+    self._currentDialogueId = 1
+    self:faceTowards(playerX, playerY)
+end
+
+function NPC:advanceDialogue()
+    if not self._inDialogue then return end
+
+    local entry = self.dialogue[self._currentDialogueId]
+    if not entry then
+        self._endDialogue()
+        return
+    end
+
+    -- If current entry has choices, "E" does NOT advance — wait for Y/N
+    if entry.choices then return end
+
+    -- No choices: advance to next or close
+    self._currentDialogueId = self._currentDialogueId + 1
+    if self._currentDialogueId > #self.dialogue then
+        self:_endDialogue()
+    end
+end
+
+function NPC:handleDialogueInput(key)
+    if not self._inDialogue then return false end
+
+    local entry = self.dialogue[self._currentDialogueId]
+    if not entry or not entry.choices then return false end
+
+    for _, choice in ipairs(entry.choices) do
+        if key == choice.key then
+            self._currentDialogueId = choice.next
+            return true
+        end
+    end
+    return false
+end
+
+function NPC:_endDialogue()
+    self._inDialogue = false
+    self._currentDialogueId = 0
 end
 
 function NPC:trade()
