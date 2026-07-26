@@ -27,17 +27,18 @@ local game = {
     map = sti("maps/map.lua"),
     walls = {}, -- wall colliders — physics only, no update/drawable
     vw = 200,
-    vh = 200
+    vh = 200,
+    viewRadius = 150,
+    visibility = {}
 }
 
 -- Get the map dimensions
 local mapW = game.map.width * game.map.tilewidth
 local mapH = game.map.height * game.map.tileheight
 
--- Get the window dimensions
-local w, h = love.graphics.getDimensions()
-local halfW = math.min(w, mapW) / 2
-local halfH = math.min(h, mapH) / 2
+-- Grid size for the map
+local gridColumns = game.map.width
+local gridRows    = game.map.height
 
 -- cam limits
 local vw, vh = game.vw, game.vh
@@ -100,6 +101,15 @@ function love.load()
             table.insert(game.walls, wall) -- store reference, not for update/draw loops
         end
     end
+
+    -- Initialize visibility grid (fog of war)
+    -- 0 = unexplored, 1 = explored (out of sight), 2 = currently visible
+    for col = 1, gridColumns do
+        game.visibility[col] = {}
+        for row = 1, gridRows do
+            game.visibility[col][row] = 0
+        end
+    end
 end
 
 -- Called every frame to update game state
@@ -154,10 +164,54 @@ function love.update(dt)
         game.player.animations:gotoFrame(1)
     end
 
+    -- Camera follows the player
+    game.cam:lookAt(game.player.x, game.player.y)
     -- World update
     game.world:update(dt)
     game.player.x = game.player.collider:getX()
     game.player.y = game.player.collider:getY()
+
+    -- Clamp player to map boundaries (16 = half the 32px collider size)
+    game.player.x = math.max(16, math.min(game.player.x, mapW - 16))
+    game.player.y = math.max(16, math.min(game.player.y, mapH - 16))
+    game.player.collider:setX(game.player.x)
+    game.player.collider:setY(game.player.y)
+
+    -- Fog of War: recompute visibility grid
+    local tileW, tileH = game.map.tilewidth, game.map.tileheight
+    local viewRadiusTiles = math.ceil(game.viewRadius / tileW)
+
+    -- Demote all currently-visible cells to explored
+    for col = 1, gridColumns do
+        local colData = game.visibility[col]
+        for row = 1, gridRows do
+            if colData[row] == 2 then
+                colData[row] = 1
+            end
+        end
+    end
+
+    -- Mark tiles within viewRadius as visible
+    local playerCol = math.floor(game.player.x / tileW) + 1
+    local playerRow = math.floor(game.player.y / tileH) + 1
+    local minCol = math.max(1, playerCol - viewRadiusTiles)
+    local maxCol = math.min(gridColumns, playerCol + viewRadiusTiles)
+    local minRow = math.max(1, playerRow - viewRadiusTiles)
+    local maxRow = math.min(gridRows, playerRow + viewRadiusTiles)
+    local px, py = game.player.x, game.player.y
+
+    for col = minCol, maxCol do
+        local colData = game.visibility[col]
+        local tileCenterX = (col - 0.5) * tileW
+        for row = minRow, maxRow do
+            local tileCenterY = (row - 0.5) * tileH
+            local dx = tileCenterX - px
+            local dy = tileCenterY - py
+            if math.sqrt(dx * dx + dy * dy) <= game.viewRadius then
+                colData[row] = 2
+            end
+        end
+    end
 
     game.player.animations:update(dt)
 
@@ -180,9 +234,6 @@ function love.update(dt)
     if vh < mapH and game.cam.y > mapH - halfVH then
         game.cam.y = mapH - halfVH
     end
-    
-    -- Camera follows the player
-    game.cam:lookAt(game.player.x, game.player.y)
 
     -- Update debug watches
     debug_helpers.watch("player_pos", { x = game.player.x, y = game.player.y })
@@ -200,18 +251,37 @@ function love.draw()
     love.graphics.print("Press Escape to quit", 10, 30)
     love.graphics.print("Press F1 to toggle hitboxes", 10, 50)
 
+    -- Use actual screen center for viewport positioning
+    local screenW, screenH = love.graphics.getDimensions()
+
+    -- Camera transform — full screen, no scissor clipping
+    game.cam:attach(0, 0, screenW, screenH, true)
 
     -- Draw the game world
-
-    -- Set up a viewport for the game world
-
-
-
-    -- Attach the camera to follow the player
-    game.cam:attach(halfW, halfH, game.vw, game.vh)
     game.map:drawLayer(game.map.layers["ground"])
     game.map:drawLayer(game.map.layers["trees"])
     game.player.animations:draw(game.player.spriteSheet, game.player.x, game.player.y, nil, nil, nil, 48, 48)
+
+    -- Fog of War overlay: render over every tile on the map
+    -- Cell 0 (unexplored) = opaque black
+    -- Cell 1 (explored, out of sight) = dimmed
+    -- Cell 2 (visible) = nothing drawn — tile shows through
+    local tileW, tileH = game.map.tilewidth, game.map.tileheight
+    for col = 1, gridColumns do
+        local colData = game.visibility[col]
+        local worldX = (col - 1) * tileW
+        for row = 1, gridRows do
+            local cell = colData[row]
+            if cell == 0 then
+                love.graphics.setColor(0, 0, 0, 1)
+                love.graphics.rectangle("fill", worldX, (row - 1) * tileH, tileW, tileH)
+            elseif cell == 1 then
+                love.graphics.setColor(0, 0, 0, 0.6)
+                love.graphics.rectangle("fill", worldX, (row - 1) * tileH, tileW, tileH)
+            end
+        end
+    end
+    love.graphics.setColor(1, 1, 1, 1)
 
     if showColliders then
         game.world:draw()
