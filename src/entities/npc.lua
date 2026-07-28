@@ -68,6 +68,18 @@ function NPC.new(world, x, y, sprite_prefix)
     self._inDialogue = false
     self._currentDialogueId = 0
 
+    -- Stuck detection
+    self._stuckTimer = 0
+    self._lastStuckX = x
+    self._lastStuckY = y
+
+    -- Rude exit (player walked away during dialogue)
+    self._rudeExit = false
+    self._rudeTimer = 0
+
+    -- Wobble effect ("joão bobo") when advancing dialogue
+    self._wobbleTimer = 0
+
     debug_helpers.log(string.format("NPC created at (%d, %d) with prefix '%s'", x, y, sprite_prefix), "DEBUG")
 
     return self
@@ -81,13 +93,41 @@ function NPC:walkTo(targetX, targetY)
     self.state = STATE.WALKING
 end
 
-function NPC:update(dt, mapW, mapH)
+function NPC:update(dt, mapW, mapH, playerX, playerY)
     -- Freeze all movement during dialogue
     if self._inDialogue then
         self._vx = 0
         self._vy = 0
         self.collider:setLinearVelocity(0, 0)
         self.animations:gotoFrame(1)
+
+        -- Feature 2: Rude exit — player walked too far during dialogue
+        if not self._rudeExit and playerX and playerY then
+            local pdx = self.x - playerX
+            local pdy = self.y - playerY
+            local pdist = math.sqrt(pdx * pdx + pdy * pdy)
+            if pdist > 96 then -- 3 tiles
+                self._rudeExit = true
+                self._rudeTimer = 3
+                debug_helpers.log("NPC: player walked away, rude exit", "DEBUG")
+            end
+        end
+
+        -- Rude exit: balloon stays a few seconds then closes
+        if self._rudeExit then
+            self._rudeTimer = self._rudeTimer - dt
+            if self._rudeTimer <= 0 then
+                self._rudeExit = false
+                self:_endDialogue()
+                return
+            end
+        end
+
+        -- Feature 3: Wobble timer (also runs during dialogue freeze)
+        if self._wobbleTimer > 0 then
+            self._wobbleTimer = self._wobbleTimer - dt
+        end
+
         return
     end
 
@@ -101,6 +141,27 @@ function NPC:update(dt, mapW, mapH)
         local dy = self._targetY - self.y
         local dist = math.sqrt(dx * dx + dy * dy)
 
+        -- Feature 1: Stuck detection
+        local sdx = self.x - self._lastStuckX
+        local sdy = self.y - self._lastStuckY
+        local moved = math.sqrt(sdx * sdx + sdy * sdy)
+        if moved < 1 then
+            self._stuckTimer = self._stuckTimer + dt
+            if self._stuckTimer >= 0.5 then
+                debug_helpers.log("NPC: stuck detected, cancelling walk", "DEBUG")
+                self._vx = 0
+                self._vy = 0
+                self.state = STATE.IDLE
+                self._targetX = nil
+                self._targetY = nil
+                self._stuckTimer = 0
+            end
+        else
+            self._stuckTimer = 0
+        end
+        self._lastStuckX = self.x
+        self._lastStuckY = self.y
+
         if dist < 2 then
             -- Arrived
             debug_helpers.log(string.format("NPC arrived at (%d, %d), entering idle", self.x, self.y), "DEBUG")
@@ -109,6 +170,7 @@ function NPC:update(dt, mapW, mapH)
             self.state = STATE.IDLE
             self._targetX = nil
             self._targetY = nil
+            self._stuckTimer = 0
         else
             self._vx = (dx / dist) * self.speed
             self._vy = (dy / dist) * self.speed
@@ -137,6 +199,12 @@ function NPC:update(dt, mapW, mapH)
         self._vx = 0
         self._vy = 0
         self.animations:gotoFrame(1)
+        self._stuckTimer = 0
+    end
+
+    -- Feature 3: Wobble timer decrement
+    if self._wobbleTimer > 0 then
+        self._wobbleTimer = self._wobbleTimer - dt
     end
 
     -- Apply velocity to collider
@@ -171,11 +239,23 @@ function NPC:updateAnimation(dt)
 end
 
 function NPC:draw()
-    self.animations:draw(self.spriteSheet, self.x, self.y, nil, nil, nil,
+    -- Feature 3: Wobble offset ("joão bobo")
+    local wobbleX = 0
+    if self._wobbleTimer > 0 then
+        local decay = self._wobbleTimer / 0.4
+        wobbleX = math.sin(self._wobbleTimer * 30) * 4 * decay
+    end
+    self.animations:draw(self.spriteSheet, self.x + wobbleX, self.y, nil, nil, nil,
         DRAW_OFFSET, DRAW_OFFSET)
 end
 
 function NPC:drawUI(playerX, playerY)
+    -- Feature 2: Rude exit — show rude text balloon (timed, no interaction)
+    if self._rudeExit then
+        self:_drawDialogueBubble("Why are you being rude?", nil, false)
+        return
+    end
+
     -- Dialogue bubble (always on top of fog)
     if self._inDialogue then
         local entry = self.dialogue[self._currentDialogueId]
@@ -203,7 +283,7 @@ function NPC:drawInteractionHint()
     love.graphics.setColor(r, g, b, a)
 end
 
-function NPC:_drawDialogueBubble(text, choices)
+function NPC:_drawDialogueBubble(text, choices, showContinue)
     local font = love.graphics.getFont()
     local lineHeight = font:getHeight() + 2
     local maxWidth = 200
@@ -215,7 +295,7 @@ function NPC:_drawDialogueBubble(text, choices)
         for _, c in ipairs(choices) do
             displayText = displayText .. "\n  " .. c.text
         end
-    else
+    elseif showContinue ~= false then
         displayText = displayText .. "\n\n  [E] Continue"
     end
 
@@ -307,6 +387,7 @@ function NPC:startDialogue(playerX, playerY)
     self._inDialogue = true
     self._currentDialogueId = 1
     self:faceTowards(playerX, playerY)
+    self._wobbleTimer = 0.4 -- Feature 3: wobble on dialogue start
     debug_helpers.log(string.format("NPC: dialogue started, entry 1/%d", #self.dialogue), "DEBUG")
 end
 
@@ -325,6 +406,7 @@ function NPC:advanceDialogue()
     -- No choices: advance to next or close
     debug_helpers.log(string.format("NPC: advancing dialogue %d -> %d", self._currentDialogueId, self._currentDialogueId + 1), "DEBUG")
     self._currentDialogueId = self._currentDialogueId + 1
+    self._wobbleTimer = 0.4 -- Feature 3: wobble on dialogue advance
     if self._currentDialogueId > #self.dialogue then
         self:_endDialogue()
     end
@@ -340,6 +422,7 @@ function NPC:handleDialogueInput(key)
         if key == choice.key then
             debug_helpers.log(string.format("NPC: dialogue choice '%s' -> entry %d", key, choice.next), "DEBUG")
             self._currentDialogueId = choice.next
+            self._wobbleTimer = 0.4 -- Feature 3: wobble on dialogue choice
             return true
         end
     end

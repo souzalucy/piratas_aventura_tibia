@@ -105,7 +105,7 @@ function love.update(dt)
     game.player:applyMovement(dt, mapW, mapH)
 
     -- Update NPC
-    game.npc:update(dt, mapW, mapH)
+    game.npc:update(dt, mapW, mapH, game.player.x, game.player.y)
     game.npc:updateAnimation(dt)
 
     -- Update camera to follow player
@@ -172,7 +172,7 @@ function love.draw()
     end
 
     -- Draw "E" interaction hint above the NPC when player is within 2 tiles
-    if game.npc:canInteract(game.player.x, game.player.y) then
+    if not game.npc._inDialogue and game.npc:canInteract(game.player.x, game.player.y) then
         game.npc:drawInteractionHint()
     end
 

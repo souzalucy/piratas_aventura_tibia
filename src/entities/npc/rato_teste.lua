@@ -49,9 +49,9 @@ function RatoTeste.new(world, x, y)
     return self
 end
 
-function RatoTeste:update(dt, mapW, mapH)
-    -- Call base NPC update first (handles walk-to movement + velocity)
-    NPC.update(self, dt, mapW, mapH)
+function RatoTeste:update(dt, mapW, mapH, playerX, playerY)
+    -- Call base NPC update first (handles walk-to movement + velocity + stuck/rude/wobble)
+    NPC.update(self, dt, mapW, mapH, playerX, playerY)
 
     -- Only wander when idle (not already walking to a target)
     if self.state ~= "idle" then return end
