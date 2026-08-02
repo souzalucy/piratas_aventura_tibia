@@ -15,6 +15,9 @@ local wf = require("libraries/windfield")
 local FoW = require("src.fog_of_war")
 local Player = require("src.entities.player")
 local Npc = require("src.entities.npc.rato_teste")
+local Inventory = require("src.ui.inventory")
+local WorldItems = require("src.entities.items")
+local Item = require("src.entities.items.item")
 
 
 -- Game state variables
@@ -33,7 +36,9 @@ local game          = {
     vw = 200,
     vh = 200,
     viewRadius = 150,
-    visibility = {}
+    visibility = {},
+    inventory = nil,
+    worldItems = nil,
 }
 
 -- Get the map dimensions
@@ -95,6 +100,13 @@ function love.load()
     -- 0 = unexplored, 1 = explored (out of sight), 2 = currently visible
     game.visibility = FoW.init(gridColumns, gridRows)
     debug_helpers.log(string.format("Fog of War grid initialized: %dx%d", gridColumns, gridRows))
+
+    -- Initialize inventory (PNG background not required — procedural fallback)
+    game.inventory = Inventory.new("assets/images/ui/inventory_background.png")
+
+    -- Initialize world items manager and load items from Tiled map item layers
+    game.worldItems = WorldItems.new()
+    game.worldItems:loadFromMap(game.map)
 end
 
 -- Called every frame to update game state
@@ -116,9 +128,19 @@ function love.update(dt)
     -- Update the physics world
     game.world:update(dt)
 
+    -- Update inventory timers (e.g., "Inventory Full!" message fade)
+    game.inventory:update(dt)
+
     -- Update the fog of war visibility based on player position and view radius
     FoW.update(game.visibility, game.player.x, game.player.y, game.viewRadius, game.map.tilewidth, game.map.tileheight,
         gridColumns, gridRows)
+
+    -- Check nearby world items for pickup prompt
+    game.worldItems:clearPrompts()
+    local nearbyItem = game.worldItems:findNearby(game.player.x, game.player.y, 64)
+    if nearbyItem then
+        nearbyItem._showPrompt = true
+    end
 
     -- Update player animations
     game.player:updateAnimation(dt)
@@ -151,11 +173,19 @@ function love.draw()
     -- Draw the game world
     game.map:drawLayer(game.map.layers["ground"])
     game.map:drawLayer(game.map.layers["decoration"])
-    game.map:drawLayer(game.map.layers["item1_padel"])
     game.map:drawLayer(game.map.layers["trees_base"])
 
     -- Draw the player
     game.player:draw()
+
+    -- Draw world items (replaces the old item1_padel tile layer)
+    for _, entry in ipairs(game.worldItems.items) do
+        local itemState = FoW.getState(game.visibility, entry.x, entry.y,
+            game.map.tilewidth, game.map.tileheight, gridColumns, gridRows)
+        if itemState == 2 then
+            entry.item:draw(entry.x, entry.y)
+        end
+    end
 
     -- Draw the NPC — only when the tile under it is visible (state 2)
     local npcState = FoW.getState(game.visibility, game.npc.x, game.npc.y,
@@ -181,12 +211,38 @@ function love.draw()
         game.world:draw()
     end
 
+    -- Draw pickup prompts for world items near the player (only when inventory is closed)
+    if not game.inventory:isOpen() then
+        for _, entry in ipairs(game.worldItems.items) do
+            if entry._showPrompt then
+                local font = love.graphics.getFont()
+                local text = "[F] Pick up"
+                local textW = font:getWidth(text)
+                local textH = font:getHeight()
+                local padX, padY = 8, 4
+                local bubbleW, bubbleH = textW + padX * 2, textH + padY * 2
+                local bubbleX = entry.x - bubbleW / 2
+                local bubbleY = entry.y - 28 - bubbleH
+
+                local r, g, b, a = love.graphics.getColor()
+                love.graphics.setColor(0.05, 0.05, 0.08, 0.85)
+                love.graphics.rectangle("fill", bubbleX, bubbleY, bubbleW, bubbleH, 4, 4)
+                love.graphics.setColor(1, 0.85, 0.4, 1)
+                love.graphics.print(text, bubbleX + padX, bubbleY + padY)
+                love.graphics.setColor(r, g, b, a)
+            end
+        end
+    end
+
     -- Draw "E" interaction hint above the NPC when player is within 2 tiles
     if not game.npc._inDialogue and game.npc:canInteract(game.player.x, game.player.y) then
         game.npc:drawInteractionHint()
     end
 
     game.cam:detach()
+
+    -- Inventory UI (drawn in screen space, on top of everything)
+    game.inventory:draw()
 
     -- Draw debug information
     debug_helpers.draw()
@@ -227,5 +283,46 @@ function love.keypressed(key)
         if game.npc:handleDialogueInput(key) then
             debug_helpers.log(string.format("Key '%s' — dialogue choice handled", key), "DEBUG")
         end
+    end
+
+    -- Inventory toggle
+    if key == "tab" then
+        game.inventory:toggle()
+    end
+
+    -- Pick up nearby item
+    if key == "f" and not game.inventory:isOpen() then
+        local nearby = game.worldItems:findNearby(game.player.x, game.player.y, 64)
+        if nearby then
+            local added = game.inventory:addItem(nearby.item)
+            if added then
+                game.worldItems:remove(nearby)
+            end
+        end
+    end
+end
+
+-- Called when the mouse is pressed
+function love.mousepressed(x, y, button, istouch, presses)
+    if game.inventory:isOpen() then
+        local droppedItem = game.inventory:mousepressed(x, y, button)
+        if droppedItem then
+            -- Drop item at player's feet
+            game.worldItems:spawnAt(droppedItem, game.player.x, game.player.y)
+        end
+    end
+end
+
+-- Called when the mouse moves
+function love.mousemoved(x, y, dx, dy, istouch)
+    if game.inventory:isOpen() then
+        game.inventory:mousemoved(x, y)
+    end
+end
+
+-- Called when the mouse is released
+function love.mousereleased(x, y, button, istouch, presses)
+    if game.inventory:isOpen() then
+        game.inventory:mousereleased(x, y, button)
     end
 end
