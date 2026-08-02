@@ -5,10 +5,11 @@ local anim8 = require("libraries/anim8")
 local utils = require("src/utils")
 local debug_helpers = require("src/debug_helpers")
 
--- Sprite frame size (half of the 64px sprite sheet — drawing is offset to center)
-local FRAME_W, FRAME_H = 64, 64
--- Draw offset so the sprite centers on the collider (collider is 32px, sprite is 64px)
-local DRAW_OFFSET = 48
+-- Sprite frame size (32x48 from the 96x192 combined sheet: 3 cols × 4 rows)
+local FRAME_W, FRAME_H = 32, 48
+-- Draw offset so the sprite centers on the collider (collider is 32px)
+local DRAW_OFFSET_X = 16
+local DRAW_OFFSET_Y = 48
 -- Half the collider size for boundary clamping
 local HALF_COLLIDER = 16
 
@@ -32,35 +33,24 @@ function Player.new(world, x, y)
     self._vy = 0
     self._isMoving = false
 
-    -- === Sprite sheets (4 directional) ===
-    -- Lines 71-74 of main.lua
-    self.spriteSheetDown  = love.graphics.newImage("assets/images/sprites/player/down.png")
-    self.spriteSheetUp    = love.graphics.newImage("assets/images/sprites/player/up.png")
-    self.spriteSheetLeft  = love.graphics.newImage("assets/images/sprites/player/left.png")
-    self.spriteSheetRight = love.graphics.newImage("assets/images/sprites/player/right.png")
+    -- === Sprite sheet (single combined 96x192: 3 cols × 4 rows) ===
+    -- Row 1 = down, row 2 = up, row 3 = left, row 4 = right
+    self.spriteSheet = love.graphics.newImage("assets/images/sprites/player/hernandez_cortez.png")
 
-    -- === Animation grids ===
-    self.gridDown  = anim8.newGrid(FRAME_W, FRAME_H,
-        self.spriteSheetDown:getWidth(),  self.spriteSheetDown:getHeight())
-    self.gridUp    = anim8.newGrid(FRAME_W, FRAME_H,
-        self.spriteSheetUp:getWidth(),    self.spriteSheetUp:getHeight())
-    self.gridLeft  = anim8.newGrid(FRAME_W, FRAME_H,
-        self.spriteSheetLeft:getWidth(),  self.spriteSheetLeft:getHeight())
-    self.gridRight = anim8.newGrid(FRAME_W, FRAME_H,
-        self.spriteSheetRight:getWidth(), self.spriteSheetRight:getHeight())
+    -- === Animation grid ===
+    self.grid = anim8.newGrid(FRAME_W, FRAME_H,
+        self.spriteSheet:getWidth(), self.spriteSheet:getHeight())
 
     -- === Animations ===
-    -- Lines 85-90 of main.lua
+    -- 3 frames per direction (cols 1-3), each direction on its own row
     self.animation = {}
-    self.animation.Down  = anim8.newAnimation(self.gridDown('1-9', 1), 0.1)
-    self.animation.Up    = anim8.newAnimation(self.gridUp('1-9', 1), 0.1)
-    self.animation.Left  = anim8.newAnimation(self.gridLeft('1-9', 1), 0.1)
-    self.animation.Right = anim8.newAnimation(self.gridRight('1-9', 1), 0.1)
+    self.animation.Down  = anim8.newAnimation(self.grid('1-3', 1), 0.1)
+    self.animation.Up    = anim8.newAnimation(self.grid('1-3', 2), 0.1)
+    self.animation.Left  = anim8.newAnimation(self.grid('1-3', 4), 0.1)
+    self.animation.Right = anim8.newAnimation(self.grid('1-3', 3), 0.1)
 
-    -- Current active sprite sheet and animation (default: facing down, idle)
-    -- Lines 91-92 of main.lua
-    self.spriteSheet = self.spriteSheetDown
-    self.animations  = self.animation.Down
+    -- Current active animation (default: facing down, idle)
+    self.animations = self.animation.Down
 
     -- Track previous direction to avoid log spam
     self._lastDirection = nil
@@ -81,28 +71,24 @@ function Player:handleInput()
     if love.keyboard.isDown("right") then
         self._vx = self.speed
         self.animations = self.animation.Right
-        self.spriteSheet = self.spriteSheetRight
         self._isMoving = true
         newDirection = "right"
     end
     if love.keyboard.isDown("left") then
         self._vx = -self.speed
         self.animations = self.animation.Left
-        self.spriteSheet = self.spriteSheetLeft
         self._isMoving = true
         newDirection = "left"
     end
     if love.keyboard.isDown("up") then
         self._vy = -self.speed
         self.animations = self.animation.Up
-        self.spriteSheet = self.spriteSheetUp
         self._isMoving = true
         newDirection = "up"
     end
     if love.keyboard.isDown("down") then
         self._vy = self.speed
         self.animations = self.animation.Down
-        self.spriteSheet = self.spriteSheetDown
         self._isMoving = true
         newDirection = "down"
     end
@@ -159,9 +145,9 @@ end
 function Player:draw()
     -- Line 206 of main.lua
     -- Params: spriteSheet, x, y, rotation, sx, sy, ox, oy
-    -- ox=48, oy=48 centers the 64px sprite on the 32px collider
+    -- ox=16, oy=48 centers the 32x48 sprite on the 32px collider
     self.animations:draw(self.spriteSheet, self.x, self.y, nil, nil, nil,
-        DRAW_OFFSET, DRAW_OFFSET)
+        DRAW_OFFSET_X, DRAW_OFFSET_Y)
 end
 
 

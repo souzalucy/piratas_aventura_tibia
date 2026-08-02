@@ -59,6 +59,16 @@ function FoW.update(visibility, px, py, viewRadius, tileW, tileH, gridCols, grid
     end
 end
 
+--- Query visibility state (0=unexplored, 1=explored, 2=visible) at world position
+function FoW.getState(visibility, worldX, worldY, tileW, tileH, gridCols, gridRows)
+    local col = math.floor(worldX / tileW) + 1
+    local row = math.floor(worldY / tileH) + 1
+    if col < 1 or col > gridCols or row < 1 or row > gridRows then
+        return nil
+    end
+    return visibility[col][row]
+end
+
 function FoW.draw(visibility, tileW, tileH, gridCols, gridRows)
     for col = 1, gridCols do
         local colData = visibility[col]

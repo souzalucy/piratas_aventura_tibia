@@ -82,9 +82,11 @@ function love.load()
     -- Walls: physics only
     if game.map.layers["walls"] then
         for _, obj in pairs(game.map.layers["walls"].objects) do
-            local wall = game.world:newRectangleCollider(obj.x, obj.y, obj.width, obj.height)
-            wall:setType("static")
-            table.insert(game.walls, wall) -- store reference, not for update/draw loops
+            if obj.width > 0 and obj.height > 0 then
+                local wall = game.world:newRectangleCollider(obj.x, obj.y, obj.width, obj.height)
+                wall:setType("static")
+                table.insert(game.walls, wall) -- store reference, not for update/draw loops
+            end
         end
         debug_helpers.log(string.format("Created %d wall colliders", #game.walls))
     end
@@ -148,14 +150,22 @@ function love.draw()
 
     -- Draw the game world
     game.map:drawLayer(game.map.layers["ground"])
-    game.map:drawLayer(game.map.layers["trees"])
+    game.map:drawLayer(game.map.layers["decoration"])
+    game.map:drawLayer(game.map.layers["item1_padel"])
+    game.map:drawLayer(game.map.layers["trees_base"])
 
     -- Draw the player
     game.player:draw()
 
-    -- Draw the NPC
-    game.npc:draw()
+    -- Draw the NPC — only when the tile under it is visible (state 2)
+    local npcState = FoW.getState(game.visibility, game.npc.x, game.npc.y,
+        game.map.tilewidth, game.map.tileheight, gridColumns, gridRows)
+    if npcState == 2 then
+        game.npc:draw()
+    end
 
+    game.map:drawLayer(game.map.layers["trees_upper"])
+    
     -- Fog of War overlay: render over every tile on the map
     -- Cell 0 (unexplored) = opaque black
     -- Cell 1 (explored, out of sight) = dimmed
