@@ -299,7 +299,7 @@ function Inventory:draw()
         love.graphics.draw(self.background, px, py)
     else
         -- Procedural background: dark panel with border
-        love.graphics.setColor(0.05, 0.05, 0.08, 0.95)
+        love.graphics.setColor(0.75, 0.75, 0.78, 0.95)
         love.graphics.rectangle("fill", px, py, PANEL_W, PANEL_H, 8, 8)
         love.graphics.setColor(0.5, 0.35, 0.15, 1) -- gold-brown border
         love.graphics.rectangle("line", px, py, PANEL_W, PANEL_H, 8, 8)
