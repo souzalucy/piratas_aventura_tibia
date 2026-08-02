@@ -9,7 +9,7 @@ local debug_helpers = require("src/debug_helpers")
 local FRAME_W, FRAME_H = 32, 48
 -- Draw offset so the sprite centers on the collider (collider is 32px)
 local DRAW_OFFSET_X = 16
-local DRAW_OFFSET_Y = 48
+local DRAW_OFFSET_Y = 32
 -- Half the collider size for boundary clamping
 local HALF_COLLIDER = 16
 
