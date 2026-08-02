@@ -4,7 +4,7 @@
 -- debug_helpers is loaded by Entity, so love must be mocked
 require("test.mocks.love_mock")
 
-local Entity = require("src.Entity")
+local Entity = require("src.entities.Entity")
 
 describe("Entity.new", function()
     it("creates an entity with default values when no args given", function()

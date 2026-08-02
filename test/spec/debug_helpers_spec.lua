@@ -168,7 +168,7 @@ describe("debug_helpers.draw", function()
 end)
 
 describe("debug_helpers.drawHitboxes", function()
-    local Entity = require("src.Entity")
+    local Entity = require("src.entities.Entity")
 
     it("does nothing when DEBUG_MODE is off", function()
         dh.DEBUG_MODE = false

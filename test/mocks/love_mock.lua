@@ -5,6 +5,27 @@ local love = {}
 
 -- graphics mock
 love.graphics = {}
+function love.graphics.draw(drawable, x, y, r, sx, sy)
+    table.insert(love.graphics._draws, { drawable = drawable, x = x, y = y, r = r, sx = sx, sy = sy })
+end
+love.graphics._draws = {}
+
+function love.graphics.line(x1, y1, x2, y2)
+    table.insert(love.graphics._lines, { x1 = x1, y1 = y1, x2 = x2, y2 = y2 })
+end
+love.graphics._lines = {}
+
+function love.graphics.setLineWidth(w)
+    love.graphics._lineWidth = w
+end
+love.graphics._lineWidth = 1
+
+love.mouse = {}
+
+function love.mouse.getPosition()
+    return 400, 300
+end
+
 function love.graphics.newImage(path)
     local img = {
         path = path,
@@ -31,8 +52,11 @@ function love.graphics.translate(x, y) end
 function love.graphics.rotate(a) end
 function love.graphics.scale(sx, sy) end
 function love.graphics.rectangle(mode, x, y, w, h)
-    love.graphics._lastRect = { mode = mode, x = x, y = y, w = w, h = h }
+    local rect = { mode = mode, x = x, y = y, w = w, h }
+    love.graphics._lastRect = rect
+    table.insert(love.graphics._rects, rect)
 end
+love.graphics._rects = {}
 function love.graphics.print(text, x, y)
     table.insert(love.graphics._prints, { text = text, x = x, y = y })
 end
@@ -58,6 +82,7 @@ love.graphics._polygons = {}
 function love.graphics.getFont()
     return {
         getHeight = function() return 14 end,
+        getWidth = function(self, text) return #text * 8 end,
         getWrap = function(_, text, maxWidth) return maxWidth, { text } end,
     }
 end
